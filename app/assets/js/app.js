@@ -16,8 +16,8 @@
   const LETTERS = ["א", "ב", "ג", "ד"];
   const SOURCE_INFO = {
     real: { title: "שאלות אמיתיות", desc: "ממבחנים, בחנים ומהמרצה", icon: "exam", color: "linear-gradient(145deg,#34C759,#248A3D)", badge: "אמיתית" },
-    generated: { title: "שאלות מחוללות", desc: "נוצרו בבינה מלאכותית מתוך הסיכומים של הקורס", icon: "sparkles", color: "linear-gradient(145deg,#BF5AF2,#8944AB)", badge: "מחוללת" },
-    mixed: { title: "מעורב", desc: "גם אמיתיות וגם מחוללות, בסדר אקראי", icon: "shuffle", color: "linear-gradient(145deg,#FF9F0A,#FF6B00)", badge: "" },
+    generated: { title: "שאלות כלליות", desc: "נוצרו בבינה מלאכותית מתוך הסיכומים של הקורס", icon: "sparkles", color: "linear-gradient(145deg,#BF5AF2,#8944AB)", badge: "כללית" },
+    mixed: { title: "מעורב", desc: "גם אמיתיות וגם כלליות, בסדר אקראי", icon: "shuffle", color: "linear-gradient(145deg,#FF9F0A,#FF6B00)", badge: "" },
   };
 
   function courseColor(c) {
@@ -480,32 +480,97 @@
       setTimeout(() => { burst.remove(); plus.remove(); }, 1100);
     }
 
-    function confetti(host) {
+    /** The summit confetti show, about 10 seconds (the length of the summit sound):
+        cannons from both bottom corners, a steady rain while the chimes play, a big finale at about 6 s.
+        Theme shapes: ribbons and dots everywhere, hearts in pink, glowing gold stars in dark. */
+    function confetti(host, theme) {
       if (reduced()) return () => {};
       const cv = document.createElement("canvas");
+      cv.setAttribute("aria-hidden", "true");
       host.prepend(cv);
       const ctx = cv.getContext("2d");
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const resize = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
       resize();
-      const colors = ["#FF2D55", "#FF9F0A", "#FFD60A", "#30D158", "#64D2FF", "#BF5AF2", "#5856D6"];
-      const parts = Array.from({ length: 140 }, () => ({
-        x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.6, r: (4 + Math.random() * 5) * dpr,
-        vx: (Math.random() - 0.5) * 2.2 * dpr, vy: (2 + Math.random() * 3) * dpr, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.25,
-        c: colors[(Math.random() * colors.length) | 0],
-      }));
-      let raf = 0; const t0 = performance.now();
-      const tick = (now) => {
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        const fade = Math.max(0, 1 - Math.max(0, now - t0 - 2600) / 1200);
-        for (const p of parts) {
-          p.x += p.vx; p.y += p.vy; p.a += p.va; p.vy += 0.03 * dpr;
-          ctx.save(); ctx.globalAlpha = fade; ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore();
+      addEventListener("resize", resize);
+      const W = () => cv.width, H = () => cv.height;
+      const palette = theme === "pink" ? ["#FF4FA3", "#FF8AC4", "#FFD84D", "#A77BFF", "#5FD68A", "#4FB8FF", "#FFFFFF"]
+        : theme === "dark" ? ["#FFD45C", "#FF8FC6", "#9C8FFF", "#5BE3C0", "#7FB8FF", "#FFFFFF"]
+        : ["#FF2D55", "#FF9F0A", "#FFD60A", "#30D158", "#64D2FF", "#BF5AF2", "#5856D6"];
+      const shapes = theme === "pink" ? ["ribbon", "ribbon", "dot", "heart", "heart", "star"]
+        : theme === "dark" ? ["ribbon", "dot", "star", "star", "star"]
+        : ["ribbon", "ribbon", "ribbon", "dot", "star"];
+      const pick = (a) => a[(Math.random() * a.length) | 0];
+      const parts = [];
+      const add = (x, y, vx, vy) => parts.push({
+        x, y, vx, vy, a: Math.random() * 6.3, va: (Math.random() - 0.5) * 0.3, flip: Math.random() * 6.3,
+        r: (5 + Math.random() * 6) * dpr, c: pick(palette), shape: pick(shapes), life: 1,
+      });
+      const cannon = (fromLeft, n) => {
+        for (let i = 0; i < n; i++) {
+          const ang = (fromLeft ? -1 : -1) * (Math.PI / 2) + (fromLeft ? 1 : -1) * (0.25 + Math.random() * 0.45);
+          const sp = (14 + Math.random() * 10) * dpr;
+          add(fromLeft ? -10 : W() + 10, H() * (0.86 + Math.random() * 0.1), Math.cos(ang) * sp, Math.sin(ang) * sp);
         }
-        if (fade > 0) raf = requestAnimationFrame(tick); else cv.remove();
       };
+      const burst = (x, y, n) => {
+        for (let i = 0; i < n; i++) {
+          const ang = Math.random() * Math.PI * 2, sp = (6 + Math.random() * 12) * dpr;
+          add(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp - 4 * dpr);
+        }
+      };
+      // timeline (ms): opening cannons, rain until 8.6 s, finale at 6.2 s, everything gone by about 10.5 s
+      const events = [
+        [0, () => { cannon(true, 70); cannon(false, 70); }],
+        [700, () => burst(W() / 2, H() * 0.3, 50)],
+        [6200, () => { cannon(true, 90); cannon(false, 90); burst(W() / 2, H() * 0.28, 90); }],
+        [7000, () => { burst(W() * 0.25, H() * 0.35, 40); burst(W() * 0.75, H() * 0.35, 40); }],
+      ];
+      let raf = 0, last = performance.now(), rainAcc = 0;
+      const t0 = last;
+      const drawShape = (p) => {
+        const sx = Math.cos(p.flip);   // ribbons flutter by squashing sideways
+        switch (p.shape) {
+          case "dot": ctx.beginPath(); ctx.arc(0, 0, p.r * 0.42, 0, 6.283); ctx.fill(); break;
+          case "heart":
+            ctx.scale(sx, 1); ctx.beginPath(); const k = p.r * 0.11;
+            ctx.moveTo(0, 3 * k); ctx.bezierCurveTo(-6 * k, -2 * k, -5 * k, -7 * k, -2.5 * k, -7 * k);
+            ctx.bezierCurveTo(-1 * k, -7 * k, 0, -6 * k, 0, -5 * k); ctx.bezierCurveTo(0, -6 * k, 1 * k, -7 * k, 2.5 * k, -7 * k);
+            ctx.bezierCurveTo(5 * k, -7 * k, 6 * k, -2 * k, 0, 3 * k); ctx.fill(); break;
+          case "star": {
+            if (theme === "dark") { ctx.shadowColor = p.c; ctx.shadowBlur = 8 * dpr; }
+            ctx.beginPath(); const R = p.r * 0.6, q = R * 0.22;
+            ctx.moveTo(0, -R); ctx.quadraticCurveTo(q, -q, R, 0); ctx.quadraticCurveTo(q, q, 0, R);
+            ctx.quadraticCurveTo(-q, q, -R, 0); ctx.quadraticCurveTo(-q, -q, 0, -R); ctx.fill(); break;
+          }
+          default: ctx.scale(sx, 1); ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2);
+        }
+      };
+      const tick = (now) => {
+        const dt = Math.min(3, (now - last) / 16.7);   // frame-rate independent (1 = one 60 fps frame)
+        last = now;
+        const t = now - t0;
+        while (events.length && events[0][0] <= t) events.shift()[1]();
+        if (t < 8600) {                                 // the rain while the chimes play
+          rainAcc += dt * 0.9;
+          while (rainAcc >= 1) { rainAcc -= 1; add(Math.random() * W(), -20, (Math.random() - 0.5) * 2 * dpr, (2 + Math.random() * 2.5) * dpr); }
+        }
+        ctx.clearRect(0, 0, W(), H());
+        const fadeAll = Math.max(0, 1 - Math.max(0, t - 9300) / 1200);
+        for (let i = parts.length - 1; i >= 0; i--) {
+          const p = parts[i];
+          p.vx *= Math.pow(0.985, dt); p.vy = p.vy * Math.pow(0.985, dt) + 0.32 * dpr * dt;
+          if (p.vy > 5 * dpr) p.vy = 5 * dpr;           // terminal speed: confetti drifts down
+          p.x += p.vx * dt + Math.sin((t / 400) + p.flip) * 0.6 * dpr; p.y += p.vy * dt;
+          p.a += p.va * dt; p.flip += 0.12 * dt;
+          if (p.y > H() + 40) { parts.splice(i, 1); continue; }
+          ctx.save(); ctx.globalAlpha = fadeAll; ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; drawShape(p); ctx.restore();
+        }
+        if (fadeAll > 0 && (parts.length || events.length || t < 8600)) raf = requestAnimationFrame(tick); else stop();
+      };
+      const stop = () => { cancelAnimationFrame(raf); removeEventListener("resize", resize); cv.remove(); };
       raf = requestAnimationFrame(tick);
-      return () => { cancelAnimationFrame(raf); cv.remove(); };
+      return stop;
     }
 
     function openSummit() {
@@ -515,7 +580,8 @@
       scene.celebrate();
       Sound.music("summit");
       Sound.sfx("correct"); haptic("success");
-      setTimeout(() => { if (alive) showIsland(Sound.playClip(true)); }, 250);
+      // the summit has its own music: show it in the island instead of playing a clip on top of it
+      setTimeout(() => { if (alive) showIsland(Sound.hasSceneMusic("summit") ? Sound.nowPlaying("summit") : Sound.playClip(true)); }, 250);
       const theme = Theme.current;
       const buddy = (flip) => theme === "pink"
         ? `<svg class="buddy" viewBox="-40 -70 80 74" aria-hidden="true"><defs>${Art.DEFS}</defs>${Art.unicorn({ flip })}</svg>`
@@ -542,7 +608,7 @@
         </div>
         <div class="actions"><button class="btn-primary" data-again>עוד טיפוס</button><button class="btn-secondary" data-menu>חזרה לבחירת שאלות</button></div>
       </div>`);
-      const stop = confetti(ov);
+      const stop = confetti(ov, theme);
       const close = () => { stop(); ov.remove(); overlays.splice(overlays.indexOf(entry), 1); summitOpen = false; Sound.music("game"); };
       const entry = { onBack: () => { close(); pop(); } };
       overlays.push(entry);

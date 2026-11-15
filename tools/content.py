@@ -23,7 +23,7 @@ CSV columns (Hebrew or English headers; one question per row):
     explanation / הסבר     at most two sentences
     ref / מקור             e.g. "מבחן 2024 מועד א שאלה 3"
     difficulty / רמה       1, 2 or 3 (default 2)
-    source / סוג           real / generated, or אמיתית / מחוללת (default: --source, else real)
+    source / סוג           real / generated, or אמיתית / כללית (default: --source, else real)
 Save it as "CSV UTF-8". The app shuffles the options, so their order in the file does not matter.
 """
 import argparse, csv, io, json, os, random, re, subprocess, sys
@@ -41,7 +41,7 @@ ICONS = ("columns", "scroll", "book")
 BANNED = ("כל התשובות", "אף אחת מהתשובות", "אף תשובה", "כל הנ\"ל", "אף לא אחת", "all of the above", "none of the above")
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SOURCE_WORDS = {"real": "real", "אמיתית": "real", "אמיתי": "real", "generated": "generated", "gen": "generated",
-                "מחוללת": "generated", "מחולל": "generated"}
+                "כללית": "generated", "כללי": "generated", "מחוללת": "generated", "מחולל": "generated"}
 HEADERS = {
     "topic": ("topic", "נושא"), "q": ("question", "q", "שאלה"), "correct": ("correct", "תשובה נכונה", "נכונה"),
     "wrong1": ("wrong1", "wrong 1", "מסיח 1", "מסיח1"), "wrong2": ("wrong2", "wrong 2", "מסיח 2", "מסיח2"),

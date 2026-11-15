@@ -14,7 +14,7 @@ app/
   assets/
     index.html, css/app.css, js/*.js            the game (4 screens, iOS look, RTL)
     fonts/                                      Heebo (Hebrew) + Inter (Latin), bundled
-    audio/manifest.json                         optional 5-second clips (empty = built-in jingles)
+    audio/manifest.json                         music, clips and sound effects (see audio/README.md)
     data/courses.json                           course manifest
     data/<folder>/course.json                   topics
     data/<folder>/questions-real.json           real exam / quiz / lecturer questions
@@ -63,7 +63,7 @@ python3 tools/content.py import arch-history-a arch-history-a-questions.csv
 ```
 
 Columns (Hebrew or English headers): נושא / topic, שאלה / question, תשובה נכונה / correct, מסיח 1–3 / wrong1–3,
-הסבר / explanation, מקור / ref, רמה / difficulty (1–3, default 2), סוג / source (אמיתית or מחוללת, default
+הסבר / explanation, מקור / ref, רמה / difficulty (1–3, default 2), סוג / source (אמיתית or כללית, default
 אמיתית). The answer order in the file does not matter; the app shuffles it. If any row has a problem, nothing is
 written and every problem is listed with its row number.
 
@@ -139,9 +139,10 @@ theme (`build/screenshots/theme-*`).
 
 ## Music
 
-Background music (per screen: menu / game / summit) and the 5-second "Now Playing" clips are listed in
-`app/assets/audio/manifest.json`; see `app/assets/audio/README.md`. With nothing listed the app plays its built-in
-jingles and no background music. Adding tracks needs no code changes; `validate_data.py` checks the manifest.
+Background music (per screen: menu / game / summit), 5-second milestone clips and sound effects are listed in
+`app/assets/audio/manifest.json`; see `app/assets/audio/README.md`. Now: two songs as background music on the menus
+and in the game (a song keeps playing between them), the "6 AM" sound on the summit, and "Fahh" on a wrong answer.
+Adding or swapping files needs no code changes; `validate_data.py` checks the manifest.
 
 ## Test on a phone or emulator
 

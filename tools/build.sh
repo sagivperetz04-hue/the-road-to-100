@@ -16,6 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8   # Hebrew output on a Windows console
+unset MSYS_NO_PATHCONV MSYS2_ARG_CONV_EXCL     # Git Bash must convert /c/... paths for the Windows tools below
 
 # python: prefer the project venv (has Playwright), then python3, then python
 PY="${PYTHON:-}"

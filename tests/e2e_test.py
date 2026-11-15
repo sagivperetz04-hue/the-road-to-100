@@ -69,8 +69,14 @@ def serve(site):
     class Quiet(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):
             pass
+    class Server(socketserver.ThreadingTCPServer):
+        daemon_threads = True
+        def handle_error(self, request, client_address):
+            # the browser hangs up mid-file when the app drops a half-loaded song: not an error
+            if not isinstance(sys.exc_info()[1], (ConnectionError, BrokenPipeError)):
+                super().handle_error(request, client_address)
     handler = functools.partial(Quiet, directory=site)
-    httpd = socketserver.ThreadingTCPServer(("127.0.0.1", 0), handler)
+    httpd = Server(("127.0.0.1", 0), handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/index.html"
 
@@ -80,8 +86,14 @@ class Session:
         self.page, self.answers, self.problems = page, answers, []
         page.on("console", lambda m: self.problems.append(f"console {m.type}: {m.text}") if m.type in ("error", "warning") else None)
         page.on("pageerror", lambda e: self.problems.append(f"pageerror: {e}"))
-        page.on("requestfailed", lambda r: self.problems.append(f"request failed: {r.url}"))
+        page.on("requestfailed", self._failed)
         page.on("response", lambda r: self.problems.append(f"HTTP {r.status}: {r.url}") if r.status >= 400 else None)
+
+    def _failed(self, r):
+        # the app cancels the download of a song it fades out (screen change, summit): expected, not a failure
+        if "ERR_ABORTED" in (r.failure or "") and r.url.split("?")[0].endswith((".mp3", ".m4a", ".ogg", ".wav", ".aac")):
+            return
+        self.problems.append(f"request failed: {r.url} ({r.failure})")
 
     async def screen(self):
         return await self.page.evaluate("() => { const s = [...document.querySelectorAll('#stack > .screen')].pop(); return s && s.dataset.screen; }")
@@ -201,6 +213,10 @@ async def run(chrome, shots):
         names = await page.locator(".course-row .row-title").all_inner_texts()
         check(len(names) == len(manifest), f"course list shows {len(names)} courses (manifest has {len(manifest)}), incl. the fixture added by one manifest line")
         check(await page.evaluate("appBack()") == "exit", "hardware Back on the first screen exits the app")
+        # background music from audio/manifest.json starts on the first screen
+        await page.wait_for_function("(() => { const m = Sound.musicState(); return m.scene === 'menu' && m.playing && m.time > 0.2; })()", timeout=8000)
+        bg = await page.evaluate("Sound.musicState()")
+        check(bg["file"] == "music/papa-dont-preach.mp3", f"background music plays on the menu ({bg['file']})")
 
         # topics toggle logic
         await s.open_course("fixture-course")
@@ -216,6 +232,25 @@ async def run(chrome, shots):
         check(await page.evaluate("appBack()") == "handled", "Back on topics is handled")
         await s.wait_screen("courses")
 
+        # the same song keeps playing into the game (not restarted)
+        await s.open_course("fixture-course"); await page.click("[data-go]"); await s.wait_screen("source")
+        await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        await page.wait_for_timeout(500)
+        gm = await page.evaluate("Sound.musicState()")
+        check(gm["scene"] == "game" and gm["playing"] and gm["file"] == bg["file"] and gm["time"] > bg["time"],
+              f"the song continues from the menu into the game ({bg['time']}s -> {gm['time']}s)")
+        await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
+        await s.answer(False)
+        await page.wait_for_selector(".explain.bad")
+        fx = await page.evaluate("Sound.sfxState()")
+        check(fx and fx["kind"] == "wrong" and fx["file"] == "sfx/fahh.mp3", f"a wrong answer plays the Fahh sound ({fx})")
+        await s.next(); await s.answer(True)
+        fx2 = await page.evaluate("Sound.sfxState()")
+        check(fx2 and fx2["kind"] == "correct" and fx2["file"] is None, "a correct answer keeps the built-in sound (Fahh only on failing)")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי"); await s.wait_screen("source")
+        await page.evaluate("appBack()"); await s.wait_screen("topics")
+        await page.evaluate("appBack()"); await s.wait_screen("courses")
+
         # each source of the fixture to the summit (real has 12 questions -> pool note + repeats)
         for source in ("real", "generated", "mixed"):
             await s.open_course("fixture-course")
@@ -225,8 +260,16 @@ async def run(chrome, shots):
                 await page.wait_for_selector(".dim-layer .alert")
                 msg = await page.inner_text(".dim-layer .alert-msg")
                 check(msg == "יש רק 12 שאלות. אחרי שייגמרו הן יחזרו בסדר אחר.", f"pool < 20 shows the note: {msg}")
-            badge_expect = {"real": "אמיתית", "generated": "מחוללת"}
+            badge_expect = {"real": "אמיתית", "generated": "כללית"}
             seen = await s.climb_to_summit(f"fixture/{source}")
+            if source == "real":
+                # the summit sound from audio/manifest.json plays once, with the confetti show and the island
+                await page.wait_for_function("(() => { const m = Sound.musicState(); return m.scene === 'summit' && m.playing && m.time > 0.3; })()", timeout=8000)
+                m = await page.evaluate("Sound.musicState()")
+                check(m["file"] == "music/summit-6am.mp3", f"summit music plays ({m})")
+                check(await page.locator(".summit canvas").count() == 1, "confetti show runs on the summit")
+                await page.wait_for_selector(".island.open", timeout=3000)
+                check("6 AM" in await page.inner_text(".island .isl-title"), "the island names the summit music (no clip on top)")
             if source == "real":
                 check(len(seen) == GOAL and len(set(seen)) == 12, f"real pool of 12 repeats after running out ({len(set(seen))} distinct in {len(seen)})")
             if source == "mixed":
@@ -236,7 +279,7 @@ async def run(chrome, shots):
                 for _ in range(12):
                     kinds.add((await page.inner_text("[data-card] .badge")).strip())
                     await s.answer(True); await s.next()
-                check(kinds == {"אמיתית", "מחוללת"}, f"mixed shows both badges: {sorted(kinds)}")
+                check(kinds == {"אמיתית", "כללית"}, f"mixed shows both badges: {sorted(kinds)}")
                 await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
             else:
                 await page.click("[data-menu]")

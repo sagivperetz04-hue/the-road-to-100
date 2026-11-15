@@ -151,11 +151,13 @@ def validate(data_dir):
 
 AUDIO_EXT = (".mp3", ".m4a", ".aac", ".ogg", ".wav")   # the types MainActivity serves
 MUSIC_SCENES = ("menu", "game", "summit")
+SFX_KINDS = ("correct", "wrong", "fall", "tap")
 BIG_AUDIO = 4 * 1024 * 1024
 
 
 def validate_audio(audio_dir):
-    """Check audio/manifest.json: a list of clips, or {"clips": [...], "music": {"menu"|"game"|"summit": [...]}}."""
+    """Check audio/manifest.json: a list of clips, or
+    {"clips": [...], "music": {"menu"|"game"|"summit": [...]}, "sfx": {"correct"|"wrong"|"fall"|"tap": {...}}}."""
     errors, warnings = [], []
     path = os.path.join(audio_dir, "manifest.json")
     if not os.path.exists(path):
@@ -166,10 +168,16 @@ def validate_audio(audio_dir):
     if isinstance(man, list):
         clips, music = man, {}
     elif isinstance(man, dict):
-        unknown = set(man) - {"clips", "music"}
+        unknown = set(man) - {"clips", "music", "sfx"}
         if unknown:
-            errors.append(f"audio/manifest.json: unknown keys {sorted(unknown)} (use \"clips\" and \"music\")")
-        clips, music = man.get("clips", []), man.get("music", {})
+            errors.append(f"audio/manifest.json: unknown keys {sorted(unknown)} (use \"clips\", \"music\" and \"sfx\")")
+        clips, music, sfx = man.get("clips", []), man.get("music", {}), man.get("sfx", {})
+        if not isinstance(sfx, dict):
+            errors.append('audio/manifest.json: "sfx" must be an object of kind -> {"file": ...}')
+            sfx = {}
+        for kind in sfx:
+            if kind not in SFX_KINDS:
+                errors.append(f'audio/manifest.json: unknown sound effect "{kind}" (use {", ".join(SFX_KINDS)})')
         if not isinstance(music, dict):
             errors.append('audio/manifest.json: "music" must be an object of scene -> list of tracks')
             music = {}
@@ -177,7 +185,7 @@ def validate_audio(audio_dir):
             if sc not in MUSIC_SCENES:
                 errors.append(f'audio/manifest.json: unknown music scene "{sc}" (use {", ".join(MUSIC_SCENES)})')
     else:
-        errors.append("audio/manifest.json: must be a list of clips or an object with clips/music")
+        errors.append("audio/manifest.json: must be a list of clips or an object with clips/music/sfx")
         return errors, warnings
     entries = [("clips", i, c) for i, c in enumerate(clips if isinstance(clips, list) else [])]
     if not isinstance(clips, list):
@@ -187,6 +195,8 @@ def validate_audio(audio_dir):
             errors.append(f'audio/manifest.json: music "{sc}" must be a list')
             continue
         entries += [(f"music.{sc}", i, t) for i, t in enumerate(tracks)]
+    if isinstance(man, dict):
+        entries += [(f"sfx.{k}", 0, v) for k, v in (man.get("sfx") or {}).items() if isinstance(man.get("sfx"), dict)]
     for where, i, e in entries:
         tag = f"audio/manifest.json {where}[{i}]"
         if not isinstance(e, dict) or not isinstance(e.get("file"), str) or not e["file"].strip():

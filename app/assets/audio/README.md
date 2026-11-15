@@ -6,7 +6,8 @@ Everything in this folder ships inside the APK. Use only audio you have the righ
 
 | Kind | When | Default (nothing listed) |
 | --- | --- | --- |
-| **Clips** (5 seconds) | every 5 stairs and at the summit, with the "Now Playing" island | the app's own synthesized jingles |
+| **Clips** (5 seconds) | every 5 stairs (and at the summit if it has no music), with the "Now Playing" island | nothing |
+| **Sound effects** (`sfx`) | `wrong`, `correct`, `tap`, `fall`; a `wrong` file also replaces the falling sound | the built-in beeps |
 | **Background music** | looping, per screen: `menu` (course / topic / source screens), `game` (the climb), `summit` (the summit screen) | silence |
 
 Background music fades between screens, drops to a quarter of its volume while a clip plays, pauses when the
@@ -32,7 +33,10 @@ The full format:
   "music": {
     "menu":   [ { "file": "music/menu.mp3", "title": "Calm loop", "volume": 0.3 } ],
     "game":   [ { "file": "music/climb-1.mp3" }, { "file": "music/climb-2.mp3" } ],
-    "summit": [ { "file": "music/summit.mp3", "volume": 0.5 } ]
+    "summit": [ { "file": "music/summit.mp3", "volume": 0.9, "loop": false } ]
+  },
+  "sfx": {
+    "wrong": { "file": "sfx/oops.mp3", "volume": 1 }
   }
 }
 ```
@@ -41,6 +45,10 @@ The full format:
 - `start` (clips only, seconds): where the 5-second clip begins.
 - `volume` (music, 0..1, default 0.35): use it to level tracks against each other.
 - `loop` (music, default true): a scene with one track loops it; a scene with several plays them in turn.
+  `"loop": false` on a scene's only track plays it once (the summit sound).
+- The same file listed for `menu` and `game` keeps playing when moving between those screens.
+- `sfx`: `wrong`, `correct`, `tap` or `fall`, each `{ "file", "volume" }`. A file replaces the built-in beep; a
+  `wrong` file also replaces the falling sound. Background music dips while it plays.
 - A scene can be left out or empty: that screen is silent.
 - Keep files small (mono, 96–128 kbps mp3 is plenty). The validator warns above 4 MB per file.
 
