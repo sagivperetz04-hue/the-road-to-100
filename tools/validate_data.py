@@ -23,6 +23,15 @@ SUMMARY_PHRASES = (
 )
 
 
+def giveaway(options, answer):
+    """True when the correct option is much longer than every wrong one (students learn "pick the longest")."""
+    if not isinstance(options, list) or len(options) != 4 or not isinstance(answer, int) or not 0 <= answer <= 3:
+        return False
+    right = str(options[answer])
+    longest_wrong = max(len(str(o)) for i, o in enumerate(options) if i != answer)
+    return len(right) > 14 and len(right) >= 1.5 * max(1, longest_wrong)
+
+
 def summary_phrases(q):
     """(field, phrase) pairs for every summary-structure phrase in the question text, options or explanation."""
     fields = [("q", q.get("q"))] + [(f"options[{i}]", o) for i, o in enumerate(q.get("options") or [])]
@@ -134,6 +143,8 @@ def validate(data_dir):
                     errors.append(f"{where}: difficulty must be 1, 2 or 3")
                 if not str(q.get("explanation", "")).strip():
                     errors.append(f"{where}: empty explanation")
+                if giveaway(q.get("options"), q.get("answer")):
+                    warnings.append(f"{where}: the correct option is much longer than the others (a giveaway)")
                 for field, phrase in summary_phrases(q):
                     errors.append(f"{where}: {field} refers to the summary (\"{phrase}\"); "
                                   "rewrite it as a standalone question about the material")

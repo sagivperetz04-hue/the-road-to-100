@@ -15,7 +15,7 @@ before it is saved, and tools/validate_data.py runs at the end.
 import argparse, json, os, random, re, subprocess, sys, urllib.error, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from validate_data import summary_phrases  # noqa: E402  (same phrase list the build enforces)
+from validate_data import giveaway, summary_phrases  # noqa: E402  (same checks the build runs)
 from content import id_allocator  # noqa: E402  (shared id numbering with tools/content.py)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -71,7 +71,9 @@ Questions that already exist (do not repeat or paraphrase them):
 Write {count} NEW questions. Rules:
 1. Use only facts stated in the source. Nothing from outside knowledge, no guesses.
 2. Exactly 4 options. The first option in your list is the correct one; the other 3 are plausible but clearly wrong
-   according to the source (prefer distractors taken from other facts in the same source).
+   according to the source. Make the wrong options hard: take them from other facts in the same source (another
+   site, date, name, phase, quote or term that a student could confuse), never jokes or obviously absurd answers.
+   All 4 options must have the same form and similar length; put details in the explanation, not in the answer.
 3. Never use "all of the above", "none of the above" or similar options.
 4. The explanation says why the answer is right in at most 2 short sentences.
 5. Everything in natural, simple Hebrew. Questions should be answerable without seeing the options' order.
@@ -120,6 +122,8 @@ def check_item(it):
         return "'all/none of the above' is not allowed"
     if not ex:
         return "missing explanation"
+    if giveaway(clean, 0):
+        return "the correct option is much longer than the others"
     hits = summary_phrases({"q": q, "options": clean, "explanation": ex})
     if hits:
         return f"refers to the summary (\"{hits[0][1]}\")"

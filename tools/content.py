@@ -33,7 +33,7 @@ ROOT = os.path.abspath(os.path.join(HERE, ".."))
 DATA = os.path.join(ROOT, "app", "assets", "data")
 SOURCES = os.path.join(ROOT, "tools", "sources")
 sys.path.insert(0, HERE)
-from validate_data import summary_phrases  # noqa: E402
+from validate_data import giveaway, summary_phrases  # noqa: E402
 
 FILES = {"real": "questions-real.json", "generated": "questions-generated.json"}
 TAG = {"real": "real", "generated": "gen"}
@@ -148,6 +148,8 @@ def check_question(item, topic_ids):
         errs.append("empty ref (where the question comes from)")
     if item.get("difficulty") not in (1, 2, 3):
         errs.append("difficulty must be 1, 2 or 3")
+    if len(opts) == 4 and giveaway(opts, 0):
+        errs.append("the correct answer is much longer than the wrong ones – shorten it or lengthen them")
     for field, phrase in summary_phrases({"q": item.get("q"), "options": opts, "explanation": ex}):
         errs.append(f"{field} refers to the summary (\"{phrase}\"); ask about the material itself")
     return errs
