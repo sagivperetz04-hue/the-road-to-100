@@ -1,0 +1,20 @@
+{
+  "id": "fixture-course",
+  "name": "קורס בדיקה",
+  "code": "0000000001",
+  "subtitle": "נתוני בדיקה",
+  "color": "#30B0C7",
+  "icon": "book",
+  "topics": [
+    {
+      "id": "alpha",
+      "name": "נושא אלפא",
+      "order": 1
+    },
+    {
+      "id": "beta",
+      "name": "נושא בטא",
+      "order": 2
+    }
+  ]
+}

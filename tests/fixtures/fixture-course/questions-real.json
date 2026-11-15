@@ -1,0 +1,194 @@
+[
+ {
+  "id": "fixture-real-0001",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 12 ועוד 6? (שאלה 1)",
+  "options": [
+   "19",
+   "18",
+   "17",
+   "28"
+  ],
+  "answer": 1,
+  "explanation": "12 ועוד 6 הם 18.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0002",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 4 ועוד 28? (שאלה 2)",
+  "options": [
+   "31",
+   "42",
+   "33",
+   "32"
+  ],
+  "answer": 3,
+  "explanation": "4 ועוד 28 הם 32.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0003",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 18 ועוד 8? (שאלה 3)",
+  "options": [
+   "25",
+   "27",
+   "36",
+   "26"
+  ],
+  "answer": 3,
+  "explanation": "18 ועוד 8 הם 26.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0004",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 15 ועוד 4? (שאלה 4)",
+  "options": [
+   "18",
+   "29",
+   "19",
+   "20"
+  ],
+  "answer": 2,
+  "explanation": "15 ועוד 4 הם 19.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0005",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 3 ועוד 28? (שאלה 5)",
+  "options": [
+   "32",
+   "30",
+   "41",
+   "31"
+  ],
+  "answer": 3,
+  "explanation": "3 ועוד 28 הם 31.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0006",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 20 ועוד 20? (שאלה 6)",
+  "options": [
+   "41",
+   "39",
+   "40",
+   "50"
+  ],
+  "answer": 2,
+  "explanation": "20 ועוד 20 הם 40.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0007",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 3 ועוד 19? (שאלה 7)",
+  "options": [
+   "22",
+   "21",
+   "32",
+   "23"
+  ],
+  "answer": 0,
+  "explanation": "3 ועוד 19 הם 22.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0008",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 6 ועוד 19? (שאלה 8)",
+  "options": [
+   "35",
+   "26",
+   "24",
+   "25"
+  ],
+  "answer": 3,
+  "explanation": "6 ועוד 19 הם 25.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0009",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 19 ועוד 28? (שאלה 9)",
+  "options": [
+   "57",
+   "46",
+   "47",
+   "48"
+  ],
+  "answer": 2,
+  "explanation": "19 ועוד 28 הם 47.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0010",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 13 ועוד 5? (שאלה 10)",
+  "options": [
+   "19",
+   "28",
+   "17",
+   "18"
+  ],
+  "answer": 3,
+  "explanation": "13 ועוד 5 הם 18.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0011",
+  "topic": "alpha",
+  "source": "real",
+  "q": "כמה זה 21 ועוד 8? (שאלה 11)",
+  "options": [
+   "29",
+   "30",
+   "28",
+   "39"
+  ],
+  "answer": 0,
+  "explanation": "21 ועוד 8 הם 29.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-real-0012",
+  "topic": "beta",
+  "source": "real",
+  "q": "כמה זה 26 ועוד 12? (שאלה 12)",
+  "options": [
+   "38",
+   "39",
+   "37",
+   "48"
+  ],
+  "answer": 0,
+  "explanation": "26 ועוד 12 הם 38.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ }
+]

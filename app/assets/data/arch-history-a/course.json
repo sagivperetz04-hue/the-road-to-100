@@ -1,0 +1,79 @@
+{
+  "id": "arch-history-a",
+  "name": "תולדות האדריכלות א'",
+  "code": "0881120701",
+  "subtitle": "עד הנצרות הקדומה",
+  "color": "#FF9500",
+  "icon": "columns",
+  "topics": [
+    {
+      "id": "stone-age",
+      "name": "תקופת האבן",
+      "order": 1
+    },
+    {
+      "id": "egypt",
+      "name": "מצרים הקדומה",
+      "order": 2
+    },
+    {
+      "id": "mesopotamia",
+      "name": "מסופוטמיה",
+      "order": 3,
+      "note": "כולל פרס"
+    },
+    {
+      "id": "aegean",
+      "name": "יוון הטרום־קלאסית: כרתים ומיקני",
+      "order": 4
+    },
+    {
+      "id": "greece-1",
+      "name": "יוון I",
+      "order": 5,
+      "note": "כולל הקריאה: אריסטו, פואטיקה"
+    },
+    {
+      "id": "greece-2",
+      "name": "יוון II",
+      "order": 6
+    },
+    {
+      "id": "rome-1",
+      "name": "רומא I",
+      "order": 7
+    },
+    {
+      "id": "rome-2",
+      "name": "רומא II",
+      "order": 8,
+      "note": "כולל הקריאה: ויטרוביוס"
+    },
+    {
+      "id": "india",
+      "name": "תת־היבשת ההודית",
+      "order": 9
+    },
+    {
+      "id": "china",
+      "name": "המזרח הרחוק I: סין",
+      "order": 10
+    },
+    {
+      "id": "japan",
+      "name": "המזרח הרחוק II: יפן",
+      "order": 11
+    },
+    {
+      "id": "pre-columbian",
+      "name": "אדריכלות טרום־קולומביאנית",
+      "order": 12
+    },
+    {
+      "id": "compare",
+      "name": "השוואות בין התקופות",
+      "order": 13,
+      "note": "שאלות שמשלבות כמה נושאים"
+    }
+  ]
+}

@@ -1,0 +1,386 @@
+[
+ {
+  "id": "fixture-gen-0001",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 13 ועוד 11? (שאלה 1)",
+  "options": [
+   "34",
+   "23",
+   "24",
+   "25"
+  ],
+  "answer": 2,
+  "explanation": "13 ועוד 11 הם 24.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0002",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 4 ועוד 20? (שאלה 2)",
+  "options": [
+   "24",
+   "25",
+   "34",
+   "23"
+  ],
+  "answer": 0,
+  "explanation": "4 ועוד 20 הם 24.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0003",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 30 ועוד 12? (שאלה 3)",
+  "options": [
+   "41",
+   "42",
+   "43",
+   "52"
+  ],
+  "answer": 1,
+  "explanation": "30 ועוד 12 הם 42.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0004",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 5 ועוד 18? (שאלה 4)",
+  "options": [
+   "22",
+   "24",
+   "23",
+   "33"
+  ],
+  "answer": 2,
+  "explanation": "5 ועוד 18 הם 23.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0005",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 6 ועוד 17? (שאלה 5)",
+  "options": [
+   "24",
+   "22",
+   "23",
+   "33"
+  ],
+  "answer": 2,
+  "explanation": "6 ועוד 17 הם 23.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0006",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 26 ועוד 19? (שאלה 6)",
+  "options": [
+   "45",
+   "55",
+   "46",
+   "44"
+  ],
+  "answer": 0,
+  "explanation": "26 ועוד 19 הם 45.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0007",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 21 ועוד 17? (שאלה 7)",
+  "options": [
+   "39",
+   "37",
+   "38",
+   "48"
+  ],
+  "answer": 2,
+  "explanation": "21 ועוד 17 הם 38.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0008",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 10 ועוד 17? (שאלה 8)",
+  "options": [
+   "26",
+   "28",
+   "37",
+   "27"
+  ],
+  "answer": 3,
+  "explanation": "10 ועוד 17 הם 27.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0009",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 22 ועוד 20? (שאלה 9)",
+  "options": [
+   "42",
+   "41",
+   "43",
+   "52"
+  ],
+  "answer": 0,
+  "explanation": "22 ועוד 20 הם 42.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0010",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 30 ועוד 23? (שאלה 10)",
+  "options": [
+   "63",
+   "54",
+   "53",
+   "52"
+  ],
+  "answer": 2,
+  "explanation": "30 ועוד 23 הם 53.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0011",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 13 ועוד 7? (שאלה 11)",
+  "options": [
+   "19",
+   "30",
+   "21",
+   "20"
+  ],
+  "answer": 3,
+  "explanation": "13 ועוד 7 הם 20.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0012",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 8 ועוד 26? (שאלה 12)",
+  "options": [
+   "35",
+   "44",
+   "34",
+   "33"
+  ],
+  "answer": 2,
+  "explanation": "8 ועוד 26 הם 34.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0013",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 14 ועוד 14? (שאלה 13)",
+  "options": [
+   "29",
+   "27",
+   "28",
+   "38"
+  ],
+  "answer": 2,
+  "explanation": "14 ועוד 14 הם 28.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0014",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 16 ועוד 14? (שאלה 14)",
+  "options": [
+   "40",
+   "31",
+   "30",
+   "29"
+  ],
+  "answer": 2,
+  "explanation": "16 ועוד 14 הם 30.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0015",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 29 ועוד 19? (שאלה 15)",
+  "options": [
+   "48",
+   "49",
+   "58",
+   "47"
+  ],
+  "answer": 0,
+  "explanation": "29 ועוד 19 הם 48.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0016",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 13 ועוד 23? (שאלה 16)",
+  "options": [
+   "37",
+   "35",
+   "36",
+   "46"
+  ],
+  "answer": 2,
+  "explanation": "13 ועוד 23 הם 36.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0017",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 4 ועוד 7? (שאלה 17)",
+  "options": [
+   "21",
+   "10",
+   "11",
+   "12"
+  ],
+  "answer": 2,
+  "explanation": "4 ועוד 7 הם 11.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0018",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 2 ועוד 17? (שאלה 18)",
+  "options": [
+   "19",
+   "18",
+   "29",
+   "20"
+  ],
+  "answer": 0,
+  "explanation": "2 ועוד 17 הם 19.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0019",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 2 ועוד 6? (שאלה 19)",
+  "options": [
+   "8",
+   "9",
+   "7",
+   "18"
+  ],
+  "answer": 0,
+  "explanation": "2 ועוד 6 הם 8.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0020",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 21 ועוד 20? (שאלה 20)",
+  "options": [
+   "42",
+   "51",
+   "41",
+   "40"
+  ],
+  "answer": 2,
+  "explanation": "21 ועוד 20 הם 41.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0021",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 16 ועוד 30? (שאלה 21)",
+  "options": [
+   "46",
+   "45",
+   "47",
+   "56"
+  ],
+  "answer": 0,
+  "explanation": "16 ועוד 30 הם 46.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0022",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 14 ועוד 5? (שאלה 22)",
+  "options": [
+   "19",
+   "20",
+   "18",
+   "29"
+  ],
+  "answer": 0,
+  "explanation": "14 ועוד 5 הם 19.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0023",
+  "topic": "alpha",
+  "source": "generated",
+  "q": "כמה זה 3 ועוד 8? (שאלה 23)",
+  "options": [
+   "10",
+   "12",
+   "21",
+   "11"
+  ],
+  "answer": 3,
+  "explanation": "3 ועוד 8 הם 11.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ },
+ {
+  "id": "fixture-gen-0024",
+  "topic": "beta",
+  "source": "generated",
+  "q": "כמה זה 7 ועוד 5? (שאלה 24)",
+  "options": [
+   "13",
+   "12",
+   "22",
+   "11"
+  ],
+  "answer": 1,
+  "explanation": "7 ועוד 5 הם 12.",
+  "ref": "שאלות בדיקה",
+  "difficulty": 1
+ }
+]
