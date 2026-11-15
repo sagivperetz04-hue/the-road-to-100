@@ -14,6 +14,9 @@ before it is saved, and tools/validate_data.py runs at the end.
 """
 import argparse, json, os, random, re, subprocess, sys, urllib.error, urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from validate_data import summary_phrases  # noqa: E402  (same phrase list the build enforces)
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA = os.path.join(ROOT, "app", "assets", "data")
 SOURCES = os.path.join(ROOT, "tools", "sources")
@@ -72,6 +75,10 @@ Write {count} NEW questions. Rules:
 4. The explanation says why the answer is right in at most 2 short sentences.
 5. Everything in natural, simple Hebrew. Questions should be answerable without seeing the options' order.
 6. difficulty: 1 = basic fact, 2 = needs understanding, 3 = detail or comparison.
+7. The student sees only the question in an app, never this summary. Ask about the material itself. Never refer
+   to the summary's structure: its headings ("לזכור למבחן", "בשורה אחת"), its tables or their columns
+   ("טבלת ההשוואה", "מילת מפתח", "משפט לזכור"), "the lesson" or "the course". Options must be real answers,
+   not labels copied from a table.
 
 Reply with JSON only, no prose, in this shape:
 [{{"q": "...", "options": ["correct", "wrong", "wrong", "wrong"], "explanation": "...", "difficulty": 2}}]"""
@@ -112,6 +119,9 @@ def check_item(it):
         return "'all/none of the above' is not allowed"
     if not ex:
         return "missing explanation"
+    hits = summary_phrases({"q": q, "options": clean, "explanation": ex})
+    if hits:
+        return f"refers to the summary (\"{hits[0][1]}\")"
     if len([s for s in re.split(r"[.!?](?:\s|$)", ex) if s.strip()]) > 2:
         return "explanation longer than 2 sentences"
     if it.get("difficulty") not in (1, 2, 3):

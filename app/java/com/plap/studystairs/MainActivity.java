@@ -1,6 +1,7 @@
 package com.plap.studystairs;
 
 import android.app.Activity;
+import android.content.pm.ApplicationInfo;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -38,6 +39,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         styleSystemBars();
 
+        // Debug builds only (tools/build.sh --debuggable): lets Chrome DevTools / tests drive the WebView over adb.
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(this);
         web.setBackgroundColor(BG);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -92,7 +95,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         if (web != null) {
-            web.evaluateJavascript("window.Sound && window.Sound.stop()", null);
+            web.evaluateJavascript("window.Sound && (window.Sound.pause ? window.Sound.pause() : window.Sound.stop())", null);
             web.onPause();
         }
         super.onPause();
@@ -101,7 +104,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (web != null) web.onResume();
+        if (web != null) {
+            web.onResume();
+            web.evaluateJavascript("window.Sound && window.Sound.resume && window.Sound.resume()", null);
+        }
     }
 
     @Override

@@ -98,6 +98,7 @@ bdi { unicode-bidi: isolate; }
 }
 .nav-back svg { width: 13px; height: 21px; }
 .nav-back:active { opacity: .35; }
+.nav-actions { display: flex; align-items: center; gap: 2px; }
 .nav-action { min-width: 44px; min-height: 44px; display: grid; place-items: center; color: var(--blue); border-radius: 22px; }
 .nav-action svg { width: 24px; height: 24px; }
 .nav-action:active { opacity: .35; }

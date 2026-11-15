@@ -1,8 +1,10 @@
 /* The staircase scene: 20 steps rising to the left (RTL), a small monster that climbs, and a following camera. */
 (function () {
   const NS = "http://www.w3.org/2000/svg";
-  const W = 46, H = 24, STEPS = 20, GROUND = 60;
-  const VIEW_W = 400, VIEW_H = 260, CAM_X = 212, CAM_Y = 178;
+  const W = 46, H = 24, STEPS = 20;
+  // y = 0 is the ground surface: step 0 stands on the grass, step i is i*H above it.
+  const GROUND = 0;
+  const VIEW_W = 400, VIEW_H = 260, CAM_X = 212, CAM_Y = 192;
   const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const stepPos = (i) => ({ x: -i * W, y: -i * H });
@@ -21,12 +23,15 @@
 
   function monster(parent) {
     const g = el("g", { class: "hero" }, parent);
+    // shadow + feet stay planted on the surface; only the body above them bobs and squashes
+    const feet = el("g", { class: "hero-feet" }, g);
+    feet.innerHTML = `
+      <ellipse cx="0" cy="-.6" rx="13" ry="2.6" fill="rgba(0,0,0,.16)"/>
+      <ellipse class="foot" cx="-6" cy="-3.4" rx="5" ry="3.4" fill="#7A3FA8"/>
+      <ellipse class="foot" cx="6" cy="-3.4" rx="5" ry="3.4" fill="#7A3FA8"/>`;
     const bob = el("g", { class: "hero-bob" }, g);
     const body = el("g", { class: "hero-body" }, bob);
     body.innerHTML = `
-      <ellipse cx="0" cy="-1" rx="13" ry="3.2" fill="rgba(0,0,0,.16)"/>
-      <ellipse cx="-6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/>
-      <ellipse cx="6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/>
       <path d="M-9 -29 L-12 -40 L-3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8" stroke-linejoin="round"/>
       <path d="M9 -29 L12 -40 L3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8" stroke-linejoin="round"/>
       <ellipse cx="0" cy="-17" rx="15" ry="15.5" fill="url(#heroGrad)"/>
@@ -76,20 +81,20 @@
 
     const world = el("g", { class: "world" }, svg);
     // ground with a few bushes
-    el("rect", { x: -1500, y: GROUND - 6, width: 2400, height: 600, fill: "url(#grassGrad)" }, world);
-    el("rect", { x: -1500, y: GROUND - 6, width: 2400, height: 4, fill: "#B5EB95" }, world);
+    el("rect", { class: "ground", x: -1500, y: GROUND, width: 2400, height: 600, fill: "url(#grassGrad)" }, world);
+    el("rect", { x: -1500, y: GROUND, width: 2400, height: 4, fill: "#B5EB95" }, world);
     for (const [bx, s] of [[70, 1], [150, .8], [-1080, .9], [300, 1.1]]) {
-      const b = el("g", { transform: `translate(${bx} ${GROUND - 6}) scale(${s})` }, world);
-      b.innerHTML = '<ellipse cx="0" cy="-6" rx="14" ry="9" fill="#6CC456"/><ellipse cx="10" cy="-9" rx="9" ry="8" fill="#7FD266"/><ellipse cx="-9" cy="-8" rx="8" ry="7" fill="#7FD266"/>';
+      const b = el("g", { transform: `translate(${bx} ${GROUND}) scale(${s})` }, world);
+      b.innerHTML = '<ellipse cx="0" cy="-6" rx="14" ry="7" fill="#6CC456"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="#7FD266"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="#7FD266"/>';
     }
     // summit platform (wider top)
     const top = stepPos(STEPS);
-    el("rect", { x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: GROUND - top.y, fill: "url(#stepGrad)" }, world);
+    el("rect", { class: "step-block", x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: GROUND - top.y, fill: "url(#stepGrad)" }, world);
     el("rect", { x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: 5, fill: "#FBF1DD" }, world);
     // steps
     for (let i = STEPS - 1; i >= 1; i--) {
       const p = stepPos(i);
-      el("rect", { x: p.x - W / 2, y: p.y, width: W, height: GROUND - p.y, fill: "url(#stepGrad)" }, world);
+      el("rect", { class: "step-block", x: p.x - W / 2, y: p.y, width: W, height: GROUND - p.y, fill: "url(#stepGrad)" }, world);
       el("rect", { x: p.x - W / 2, y: p.y, width: W, height: 5, fill: "#FBF1DD" }, world);
       el("rect", { x: p.x + W / 2 - 4, y: p.y + 5, width: 4, height: GROUND - p.y - 5, fill: "rgba(150,110,60,.16)" }, world);
       el("line", { x1: p.x + W / 2, y1: p.y, x2: p.x + W / 2, y2: p.y + H, stroke: "rgba(150,110,60,.32)", "stroke-width": 1 }, world);

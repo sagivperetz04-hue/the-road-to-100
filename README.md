@@ -70,6 +70,10 @@ tools/build.sh --bump          # bump versionCode, validate, build, sign -> buil
 tools/build.sh --bump --test   # also run the Playwright test first (pip install playwright; uses installed Chrome)
 ```
 
+On Windows, run it from Git Bash (`ANDROID_HOME=/c/Android/sdk bash tools/build.sh --bump`). The script finds
+`d8.bat`/`apksigner.bat`, needs no `zip`, and uses `.venv` (with Playwright) for Python when it exists. Keep the
+project and the SDK in folders whose paths are English letters only.
+
 To install over an older build, sign with the same keystore (`KEYSTORE`, `KS_PASS`, `KEY_ALIAS`, `KEY_PASS`)
 and keep the same application id (`APP_ID`, default `com.plap.studystairs`).
 
@@ -79,3 +83,28 @@ Progress is stored in `localStorage` on a fixed in-app origin, so it survives ap
 - per course + source: best streak, number of summits, last topic selection;
 - per question: times seen and times answered wrong. Questions she got wrong come up about twice as often,
   and the same question never appears twice in a row.
+
+## Music
+
+Background music (per screen: menu / game / summit) and the 5-second "Now Playing" clips are listed in
+`app/assets/audio/manifest.json`; see `app/assets/audio/README.md`. With nothing listed the app plays its built-in
+jingles and no background music. Adding tracks needs no code changes; `validate_data.py` checks the manifest.
+
+## Test on a phone or emulator
+
+```bash
+tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
+adb install -r build/outputs/madregot-v3.0-3-debug.apk
+python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
+```
+
+Install the release APK again afterwards (`adb install -r build/outputs/madregot-v3.0-3.apk`); both are signed with
+the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
+
+Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths
+(`ANDROID_AVD_HOME=C:\Android\avd`, `ANDROID_EMULATOR_HOME=C:\Android\emuhome`), and start it with one core and
+netsim features off, otherwise it freezes before Android boots:
+
+```bash
+emulator -avd madregot_test -no-snapshot -gpu swiftshader_indirect -cores 1 -feature -WiFiPacketStream,-Uwb,-NetsimWebUi,-NetsimCliUi,-Vulkan
+```

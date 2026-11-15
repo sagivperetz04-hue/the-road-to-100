@@ -56,6 +56,7 @@
       stackEl.appendChild(scr.el);
     }
     busy = false;
+    syncMusic();
     if (scr.onShow) scr.onShow();
   }
 
@@ -72,7 +73,14 @@
     if (cur.destroy) cur.destroy();
     cur.el.remove();
     busy = false;
+    syncMusic();
     if (prev.onShow) prev.onShow();
+  }
+
+  // background music follows the top screen: the game has its own playlist, every other screen plays "menu"
+  function syncMusic() {
+    const top = stack[stack.length - 1];
+    if (top) Sound.music(top.el.dataset.screen === "game" ? "game" : "menu");
   }
 
   function back() {
@@ -121,7 +129,7 @@
   /* ------------------------------------------------------------------ screen 1: courses */
   function coursesScreen() {
     const el = h(`<section data-screen="courses">
-      ${navbar({ title: "בחרי קורס", action: `<button class="nav-action" data-act="sound" aria-label="צלילים"></button>` })}
+      ${navbar({ title: "בחרי קורס", action: `<span class="nav-actions">${Sound.hasMusic ? '<button class="nav-action" data-act="music" aria-label="מוזיקה"></button>' : ""}<button class="nav-action" data-act="sound" aria-label="צלילים"></button></span>` })}
       <div class="scroller">
         <div class="large-title"><h1>בחרי קורס</h1><p>20 תשובות נכונות ברצף = פסגה.</p></div>
         <div class="group" data-list></div>
@@ -130,8 +138,14 @@
     wireScroller(el);
     const snd = $('[data-act="sound"]', el);
     const paintSound = () => { snd.innerHTML = Icons.sound(Store.sound); snd.setAttribute("aria-pressed", Store.sound ? "true" : "false"); snd.setAttribute("aria-label", Store.sound ? "השתקת צלילים" : "הפעלת צלילים"); };
-    snd.addEventListener("click", () => { Store.sound = !Store.sound; if (!Store.sound) Sound.stop(); else { Sound.unlock(); Sound.sfx("tap"); } paintSound(); });
+    snd.addEventListener("click", () => { Store.sound = !Store.sound; if (!Store.sound) Sound.stop(); else { Sound.unlock(); Sound.sfx("tap"); } Sound.refresh(); paintSound(); });
     paintSound();
+    const mus = $('[data-act="music"]', el);
+    if (mus) {
+      const paintMusic = () => { mus.innerHTML = Icons.music(Store.music); mus.setAttribute("aria-pressed", Store.music ? "true" : "false"); mus.setAttribute("aria-label", Store.music ? "השתקת מוזיקה" : "הפעלת מוזיקה"); };
+      mus.addEventListener("click", () => { Store.music = !Store.music; Sound.unlock(); Sound.sfx("tap"); Sound.refresh(); paintMusic(); });
+      paintMusic();
+    }
 
     function render() {
       const list = $("[data-list]", el);
@@ -429,6 +443,7 @@
       const summits = Store.recordSummit(course.id, source);
       const st = Store.sourceStats(course.id, source);
       scene.celebrate();
+      Sound.music("summit");
       Sound.sfx("correct"); haptic("success");
       setTimeout(() => { if (alive) showIsland(Sound.playClip(true)); }, 250);
       const ov = h(`<div class="summit" role="dialog" aria-modal="true" aria-labelledby="sm-t">
@@ -452,7 +467,7 @@
         <div class="actions"><button class="btn-primary" data-again>עוד טיפוס</button><button class="btn-secondary" data-menu>חזרה לבחירת שאלות</button></div>
       </div>`);
       const stop = confetti(ov);
-      const close = () => { stop(); ov.remove(); overlays.splice(overlays.indexOf(entry), 1); summitOpen = false; };
+      const close = () => { stop(); ov.remove(); overlays.splice(overlays.indexOf(entry), 1); summitOpen = false; Sound.music("game"); };
       const entry = { onBack: () => { close(); pop(); } };
       overlays.push(entry);
       $("[data-again]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); streak = 0; scene.set(0); paintRing(false); nextQuestion(); });
@@ -519,6 +534,6 @@
       loading.innerHTML = `<div class="error-box">לא הצלחתי לטעון את הקורסים. (${esc(e.message)})</div>`;
     }
   }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.stop(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pause(); else Sound.resume(); });
   boot();
 })();

@@ -11,7 +11,7 @@
 Usage: python3 tests/e2e_test.py [--chrome /usr/bin/google-chrome] [--shots out_dir]
 Requires: pip install playwright  (uses an installed Chrome/Chromium; no browser download needed)
 """
-import argparse, asyncio, functools, http.server, json, os, shutil, socketserver, sys, tempfile, threading
+import argparse, asyncio, functools, http.server, json, math, os, shutil, socketserver, struct, sys, tempfile, threading, wave
 
 from playwright.async_api import async_playwright
 
@@ -42,6 +42,27 @@ def make_site():
             for q in json.load(open(os.path.join(site, "data", entry["folder"], f), encoding="utf-8")):
                 answers[q["id"]] = q["options"][q["answer"]]
     return site, manifest, answers
+
+
+def tone_wav(path, freq, seconds=2.0, rate=8000):
+    """A short sine tone: stands in for real music files in the music test."""
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+        w.writeframes(b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * freq * i / rate))) for i in range(int(rate * seconds))))
+
+
+def make_music_site(site):
+    """A copy of the site whose audio manifest uses the new {clips, music} format with generated tracks."""
+    msite = tempfile.mkdtemp(prefix="stairs-music-")
+    shutil.copytree(site, msite, dirs_exist_ok=True)
+    adir = os.path.join(msite, "audio")
+    for name, f in (("menu.wav", 330), ("game1.wav", 440), ("game2.wav", 494), ("summit.wav", 660), ("clip.wav", 880)):
+        tone_wav(os.path.join(adir, name), f)
+    json.dump({"clips": [{"file": "clip.wav", "title": "Test clip", "artist": "e2e"}],
+               "music": {"menu": [{"file": "menu.wav"}], "game": [{"file": "game1.wav"}, {"file": "game2.wav", "volume": 0.5}],
+                         "summit": [{"file": "summit.wav"}]}},
+              open(os.path.join(adir, "manifest.json"), "w"))
+    return msite
 
 
 def serve(site):
@@ -103,6 +124,30 @@ class Session:
         title = await page.inner_text(".summit h2")
         check(title.strip() == SUMMIT_TITLE, f"{label}: reached the summit screen ('{title.strip()}')")
         return seen
+
+
+async def ground_report(page):
+    """Scene geometry in SVG units: how far the creature's feet are above the grass, and how far the step blocks
+    end from the grass line. Feet on the ground at step N -> feet_gap == N * 24 (one stair is 24 units)."""
+    return await page.evaluate("""() => {
+      const svg = document.querySelector('[data-scene] svg');
+      const ground = svg.querySelector('.ground').getBoundingClientRect().top;
+      const k = svg.getScreenCTM().d;                      // px per SVG unit (vertical)
+      const feet = Math.max(...[...svg.querySelectorAll('.hero-feet .foot')].map(f => f.getBoundingClientRect().bottom));
+      const blocks = [...svg.querySelectorAll('.step-block')].map(b => Math.abs(b.getBoundingClientRect().bottom - ground) / k);
+      return { feet_gap: (ground - feet) / k, worst_block_gap: Math.max(...blocks), blocks: blocks.length };
+    }""")
+
+
+def check_feet(g, step, label):
+    want = step * 24
+    check(abs(g["feet_gap"] - want) <= 0.6, f"{label}: feet {'on the grass' if step == 0 else f'on stair {step}'} (gap {g['feet_gap']:.2f}, want {want})")
+
+
+async def shot_page(page, shots, name):
+    await page.screenshot(path=os.path.join(shots, f"{name}.png"))
+    issues = await overflow_report(page)
+    check(not issues, f"{name}: no overflow / clipped text" + ("" if not issues else f" -> {issues[:4]}"))
 
 
 async def overflow_report(page):
@@ -194,6 +239,8 @@ async def run(chrome, shots):
         await s.answer(False)
         await page.wait_for_selector(".explain.bad")
         check(await page.inner_text("[data-num]") == "0", "a wrong answer resets the streak to 0")
+        await page.wait_for_timeout(1700)   # the animated fall from 12 stairs up (about 1 s)
+        check_feet(await ground_report(page), 0, "after an animated fall")
         await s.next(); await s.answer(True); await s.next(); await s.answer(True)
         check(await page.inner_text("[data-num]") == "2", "streak counter shows 2 after two correct answers")
         await s.next()
@@ -267,14 +314,20 @@ async def run(chrome, shots):
             await page.click("[data-go]"); await s.wait_screen("source"); await shot("3-source")
             await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
             await page.wait_for_selector("[data-card][data-qid]"); await shot("4-game")
+            g = await ground_report(page)
+            check_feet(g, 0, "game start")
+            check(g["blocks"] == 20 and g["worst_block_gap"] <= 0.5, f"all {g['blocks']} stair blocks rest on the grass (worst gap {g['worst_block_gap']:.2f})")
             await s.answer(True); await page.wait_for_selector("[data-foot].show"); await shot("5-correct")
+            check_feet(await ground_report(page), 1, "after one correct answer")
             await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show"); await shot("6-wrong")
+            check_feet(await ground_report(page), 0, "after a fall")
             await s.next(); await s.answer(True); await s.next()
             await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await shot("7-leave-dialog")
             await page.click("text=המשך לשחק")
             await s.answer(False); await s.next()
             await s.climb_to_summit(f"{w}x{hgt}")
             await shot("8-summit")
+            check_feet(await ground_report(page), GOAL, "summit")
             await page.click("[data-menu]"); await s.wait_screen("source")
             await page.evaluate("appBack()"); await s.wait_screen("topics")
             await page.click('.topic-row >> nth=0'); await page.click("[data-go]"); await s.wait_screen("source"); await shot("9-source-single-topic")
@@ -284,6 +337,59 @@ async def run(chrome, shots):
             await shot("10-game-course2")
             check(not s.problems, "no console errors / warnings" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
             await ctx.close()
+        # ---------------------------------------------------------------- 3. background music (generated test tracks)
+        print("\n[music] background music infrastructure")
+        msite = make_music_site(site)
+        mhttpd, murl = serve(msite)
+        ctx = await browser.new_context(viewport={"width": 393, "height": 851}, device_scale_factor=2, has_touch=True)
+        page = await ctx.new_page()
+        s = Session(page, answers)
+        state = lambda: page.evaluate("Sound.musicState()")
+        async def wait_music(pred, label, timeout=6000):
+            try:
+                await page.wait_for_function(f"(() => {{ const m = Sound.musicState(); return {pred}; }})()", timeout=timeout)
+                check(True, label)
+            except Exception:
+                check(False, f"{label} (state {await state()})")
+        await page.goto(murl); await page.wait_for_selector(".course-row")
+        check(await page.locator('[data-act="music"]').count() == 1, "music toggle shown when the manifest has tracks")
+        await page.click('.course-row >> nth=0')       # a user gesture, like on a phone
+        await s.wait_screen("topics")
+        await wait_music("m.scene === 'menu' && m.playing && m.file === 'menu.wav'", "menu music plays on the menu screens")
+        await page.click("[data-go]"); await s.wait_screen("source")
+        await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        await wait_music("m.scene === 'game' && m.playing && m.file === 'game1.wav'", "game music takes over in the game")
+        for _ in range(5):
+            await s.answer(True); await s.next()
+        await wait_music("m.ducked && m.volume < 0.2", "music ducks under the 5-step clip")
+        await wait_music("!m.ducked && m.volume > 0.3", "music comes back after the clip", timeout=9000)
+        await page.evaluate("Sound.pause()")
+        await wait_music("!m.playing", "Sound.pause() (app in background) pauses the music")
+        await page.evaluate("Sound.resume()")
+        await wait_music("m.playing && m.scene === 'game'", "Sound.resume() picks the game music up again")
+        await page.evaluate("appBack()"); await page.wait_for_selector(".dim-layer .alert")
+        await page.click("text=צאי"); await s.wait_screen("source")
+        await wait_music("m.scene === 'menu' && m.playing", "leaving the game goes back to menu music")
+        await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        await s.climb_to_summit("music")
+        await wait_music("m.scene === 'summit' && m.playing && m.file === 'summit.wav'", "summit music plays on the summit screen")
+        await page.click("[data-again]")
+        await wait_music("m.scene === 'game' && m.playing", "'עוד טיפוס' goes back to game music")
+        await page.click('[data-act="leave"]'); await s.wait_screen("source")
+        await page.evaluate("appBack()"); await s.wait_screen("topics"); await page.evaluate("appBack()"); await s.wait_screen("courses")
+        await page.click('[data-act="music"]')
+        await wait_music("!m.playing", "music toggle off stops the music")
+        check(await page.get_attribute('[data-act="music"]', "aria-pressed") == "false", "music toggle shows off")
+        await page.reload(); await page.wait_for_selector(".course-row")
+        check(await page.get_attribute('[data-act="music"]', "aria-pressed") == "false", "music off is remembered")
+        await page.click('[data-act="music"]')
+        await wait_music("m.playing && m.scene === 'menu'", "music toggle on starts the menu music again")
+        await shot_page(page, shots, "music-courses")
+        check(not s.problems, "music: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
+        await ctx.close()
+        mhttpd.shutdown()
+        shutil.rmtree(msite, ignore_errors=True)
+
         await browser.close()
     httpd.shutdown()
     shutil.rmtree(site, ignore_errors=True)
@@ -293,7 +399,10 @@ async def run(chrome, shots):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--chrome", default=shutil.which("google-chrome") or shutil.which("chromium") or "/usr/bin/google-chrome")
+    win = [os.path.join(os.environ.get(v, ""), "Google", "Chrome", "Application", "chrome.exe")
+           for v in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA") if os.environ.get(v)]
+    default = shutil.which("google-chrome") or shutil.which("chromium") or next((c for c in win if os.path.exists(c)), "/usr/bin/google-chrome")
+    ap.add_argument("--chrome", default=default)
     ap.add_argument("--shots", default=os.path.join(ROOT, "build", "screenshots"))
     a = ap.parse_args()
     sys.exit(asyncio.run(run(a.chrome, a.shots)))

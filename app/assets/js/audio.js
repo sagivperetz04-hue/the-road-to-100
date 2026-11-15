@@ -1,6 +1,12 @@
-/* Sound: short UI effects + 5-second "Now Playing" clips.
-   Clips come from audio/manifest.json; when it is empty the app plays its own synthesized jingles. */
+/* Sound: short UI effects, 5-second "Now Playing" clips, and optional background music.
+   audio/manifest.json is either a list of clips (old format) or
+     { "clips": [ ...5-second clips... ], "music": { "menu": [...], "game": [...], "summit": [...] } }.
+   With no clips the app plays its own synthesized jingles; with no music tracks there is no background music. */
 (function () {
+  const SCENES = ["menu", "game", "summit"];
+  const MUSIC_VOL = 0.35;   // default track volume (a track can set its own "volume", 0..1)
+  const DUCK = 0.25;        // music volume factor while a clip plays
+  const FADE_MS = 700;
   let ctx = null;
   let master = null;
   let fileClips = [];
@@ -108,6 +114,78 @@
     fade.setValueAtTime(0.55, end + 0.05);
   }
 
+  /* ------------------------------------------------------------ background music */
+  const music = { tracks: {}, scene: null, el: null, track: null, index: {}, fadeIv: 0, ducked: false, duckTimer: 0, paused: false };
+
+  const musicOn = () => Store.sound && Store.music;
+  const target = () => (music.track ? (music.track.volume != null ? music.track.volume : MUSIC_VOL) : MUSIC_VOL) * (music.ducked ? DUCK : 1);
+
+  function fadeTo(el, to, ms, done) {
+    clearInterval(music.fadeIv);
+    if (!el) { if (done) done(); return; }
+    const from = el.volume, t0 = Date.now();
+    if (ms <= 0) { el.volume = to; if (done) done(); return; }
+    music.fadeIv = setInterval(() => {
+      const k = Math.min(1, (Date.now() - t0) / ms);
+      try { el.volume = Math.max(0, Math.min(1, from + (to - from) * k)); } catch (e) { /* ignore */ }
+      if (k >= 1) { clearInterval(music.fadeIv); if (done) done(); }
+    }, 40);
+  }
+
+  function dropEl(el) { if (!el) return; try { el.pause(); el.removeAttribute("src"); el.load(); } catch (e) { /* ignore */ } }
+
+  function startTrack(scene) {
+    const list = music.tracks[scene] || [];
+    if (!list.length) return;
+    const i = (music.index[scene] = ((music.index[scene] == null ? -1 : music.index[scene]) + 1) % list.length);
+    const t = list[i];
+    const el = new Audio("audio/" + t.file);
+    el.preload = "auto";
+    el.loop = list.length === 1 && t.loop !== false;
+    el.volume = 0;
+    el.addEventListener("ended", () => { if (music.el === el && music.scene === scene) { dropEl(el); music.el = null; startTrack(scene); } });
+    el.addEventListener("error", () => { if (music.el === el) { music.el = null; music.track = null; } });
+    music.el = el; music.track = t;
+    const p = el.play();
+    if (p && p.catch) p.catch(() => {});
+    fadeTo(el, target(), FADE_MS);
+  }
+
+  function setScene(scene) {
+    if (scene && !SCENES.includes(scene)) scene = null;
+    if (music.scene === scene && (music.el || !musicOn())) return;
+    music.scene = scene;
+    const old = music.el;
+    music.el = null; music.track = null;
+    if (old) fadeTo(old, 0, FADE_MS / 2, () => dropEl(old));
+    if (scene && musicOn() && !music.paused) setTimeout(() => { if (music.scene === scene && !music.el) startTrack(scene); }, old ? FADE_MS / 2 : 0);
+  }
+
+  function duck(ms) {
+    if (!music.el) return;
+    music.ducked = true; fadeTo(music.el, target(), 250);
+    clearTimeout(music.duckTimer);
+    music.duckTimer = setTimeout(() => { music.ducked = false; if (music.el) fadeTo(music.el, target(), 600); }, ms);
+  }
+
+  function pauseMusic() {
+    music.paused = true;
+    if (music.el) { try { music.el.pause(); } catch (e) { /* ignore */ } }
+  }
+
+  function resumeMusic() {
+    music.paused = false;
+    if (!musicOn() || !music.scene) return;
+    if (music.el) { const p = music.el.play(); if (p && p.catch) p.catch(() => {}); fadeTo(music.el, target(), FADE_MS); }
+    else startTrack(music.scene);
+  }
+
+  function stopMusic() {
+    const old = music.el;
+    music.el = null; music.track = null;
+    if (old) fadeTo(old, 0, 200, () => dropEl(old));
+  }
+
   function stopAll() {
     clearTimeout(stopTimer);
     for (const n of active) { try { n.stop(); } catch (e) { /* already stopped */ } }
@@ -118,13 +196,31 @@
 
   window.Sound = {
     async init() {
+      let man = [];
       try {
         const res = await fetch("audio/manifest.json", { cache: "no-store" });
-        const list = res.ok ? await res.json() : [];
-        fileClips = Array.isArray(list) ? list.filter((c) => c && typeof c.file === "string") : [];
-      } catch (e) { fileClips = []; }
+        man = res.ok ? await res.json() : [];
+      } catch (e) { man = []; }
+      const ok = (c) => c && typeof c.file === "string" && c.file.trim();
+      const clips = Array.isArray(man) ? man : (man && Array.isArray(man.clips) ? man.clips : []);
+      fileClips = clips.filter(ok);
+      const m = (man && !Array.isArray(man) && man.music) || {};
+      music.tracks = {};
+      for (const sc of SCENES) music.tracks[sc] = Array.isArray(m[sc]) ? m[sc].filter(ok) : [];
     },
-    unlock() { if (Store.sound) ensureCtx(); },
+    unlock() { if (Store.sound) ensureCtx(); if (musicOn() && music.scene && !music.el) resumeMusic(); },
+
+    /** True when the manifest lists at least one background-music track. */
+    get hasMusic() { return SCENES.some((sc) => music.tracks[sc] && music.tracks[sc].length); },
+    /** Which music to play: "menu", "game", "summit", or null for silence. Crossfades; same scene keeps playing. */
+    music(scene) { setScene(scene); },
+    /** Called when sound or music is switched on/off. */
+    refresh() { if (musicOn()) resumeMusic(); else stopMusic(); },
+    /** App went to the background / came back (also called from MainActivity.onPause/onResume). */
+    pause() { stopAll(); pauseMusic(); },
+    resume() { resumeMusic(); },
+    /** For tests: what the music player is doing. */
+    musicState() { return { scene: music.scene, playing: !!(music.el && !music.el.paused), file: music.track ? music.track.file : null, ducked: music.ducked, volume: music.el ? +music.el.volume.toFixed(2) : 0 }; },
 
     sfx(kind) {
       if (!Store.sound) return;
@@ -141,6 +237,7 @@
     playClip(preferSummit) {
       if (!Store.sound) return null;
       stopAll();
+      duck(5200);
       if (fileClips.length) {
         const c = fileClips[clipIndex++ % fileClips.length];
         try {

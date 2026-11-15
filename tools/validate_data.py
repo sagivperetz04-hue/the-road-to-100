@@ -13,6 +13,22 @@ DEFAULT_DATA = os.path.join(HERE, "..", "app", "assets", "data")
 SOURCES = {"questions-real.json": "real", "questions-generated.json": "generated"}
 REQUIRED = ("id", "topic", "source", "q", "options", "answer", "explanation", "ref", "difficulty")
 
+# Phrases that point at the structure of the study summaries (their headings, tables or lessons) instead of
+# the material. A question must make sense on its own in the app, so these fail the build. `ref` is exempt:
+# it is metadata that names the source document.
+SUMMARY_PHRASES = (
+    "לזכור למבחן", "בשורה אחת", "טבלת ההשוואה", "בטבלת", "בטבלה", "הסיכום", "בסיכום", "לפי הסיכום",
+    "מילת מפתח", "מילות מפתח", "משפט לזכור", "שכדאי לזכור", "בשיעור", "במצגת", "מוטיבים שחוזרים",
+    "מוטיב שחוזר",
+)
+
+
+def summary_phrases(q):
+    """(field, phrase) pairs for every summary-structure phrase in the question text, options or explanation."""
+    fields = [("q", q.get("q"))] + [(f"options[{i}]", o) for i, o in enumerate(q.get("options") or [])]
+    fields.append(("explanation", q.get("explanation")))
+    return [(name, ph) for name, text in fields if isinstance(text, str) for ph in SUMMARY_PHRASES if ph in text]
+
 
 def width(s):
     """Display width (Hebrew letters are 1 column, combining marks 0)."""
@@ -118,6 +134,9 @@ def validate(data_dir):
                     errors.append(f"{where}: difficulty must be 1, 2 or 3")
                 if not str(q.get("explanation", "")).strip():
                     errors.append(f"{where}: empty explanation")
+                for field, phrase in summary_phrases(q):
+                    errors.append(f"{where}: {field} refers to the summary (\"{phrase}\"); "
+                                  "rewrite it as a standalone question about the material")
                 text = str(q.get("q", "")).strip()
                 if text in texts:
                     warnings.append(f"{where}: same question text appears twice in {fname}")
@@ -130,9 +149,73 @@ def validate(data_dir):
     return errors, warnings, rows
 
 
+AUDIO_EXT = (".mp3", ".m4a", ".aac", ".ogg", ".wav")   # the types MainActivity serves
+MUSIC_SCENES = ("menu", "game", "summit")
+BIG_AUDIO = 4 * 1024 * 1024
+
+
+def validate_audio(audio_dir):
+    """Check audio/manifest.json: a list of clips, or {"clips": [...], "music": {"menu"|"game"|"summit": [...]}}."""
+    errors, warnings = [], []
+    path = os.path.join(audio_dir, "manifest.json")
+    if not os.path.exists(path):
+        return errors, warnings
+    man = load(path, errors)
+    if man is None:
+        return errors, warnings
+    if isinstance(man, list):
+        clips, music = man, {}
+    elif isinstance(man, dict):
+        unknown = set(man) - {"clips", "music"}
+        if unknown:
+            errors.append(f"audio/manifest.json: unknown keys {sorted(unknown)} (use \"clips\" and \"music\")")
+        clips, music = man.get("clips", []), man.get("music", {})
+        if not isinstance(music, dict):
+            errors.append('audio/manifest.json: "music" must be an object of scene -> list of tracks')
+            music = {}
+        for sc in music:
+            if sc not in MUSIC_SCENES:
+                errors.append(f'audio/manifest.json: unknown music scene "{sc}" (use {", ".join(MUSIC_SCENES)})')
+    else:
+        errors.append("audio/manifest.json: must be a list of clips or an object with clips/music")
+        return errors, warnings
+    entries = [("clips", i, c) for i, c in enumerate(clips if isinstance(clips, list) else [])]
+    if not isinstance(clips, list):
+        errors.append('audio/manifest.json: "clips" must be a list')
+    for sc, tracks in music.items():
+        if not isinstance(tracks, list):
+            errors.append(f'audio/manifest.json: music "{sc}" must be a list')
+            continue
+        entries += [(f"music.{sc}", i, t) for i, t in enumerate(tracks)]
+    for where, i, e in entries:
+        tag = f"audio/manifest.json {where}[{i}]"
+        if not isinstance(e, dict) or not isinstance(e.get("file"), str) or not e["file"].strip():
+            errors.append(f"{tag}: needs a \"file\"")
+            continue
+        f = e["file"]
+        if not f.lower().endswith(AUDIO_EXT):
+            errors.append(f"{tag}: {f}: unsupported type (use {', '.join(AUDIO_EXT)})")
+        full = os.path.join(audio_dir, f)
+        if not os.path.isfile(full):
+            errors.append(f"{tag}: file not found: app/assets/audio/{f}")
+        elif os.path.getsize(full) > BIG_AUDIO:
+            warnings.append(f"{tag}: {f} is {os.path.getsize(full) // 1024} KB; the APK grows by that much")
+        vol = e.get("volume")
+        if vol is not None and not (isinstance(vol, (int, float)) and 0 <= vol <= 1):
+            errors.append(f"{tag}: volume must be between 0 and 1")
+        start = e.get("start")
+        if start is not None and not (isinstance(start, (int, float)) and start >= 0):
+            errors.append(f"{tag}: start must be a number of seconds >= 0")
+    return errors, warnings
+
+
 def main():
     data_dir = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DATA)
     errors, warnings, rows = validate(data_dir)
+    audio_dir = os.path.join(os.path.dirname(data_dir), "audio")
+    ae, aw = validate_audio(audio_dir)
+    errors += ae
+    warnings += aw
     if rows:
         w1 = max(width(r[0]) for r in rows) + 2
         w2 = max(width(r[1]) for r in rows) + 2
