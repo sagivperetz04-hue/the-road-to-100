@@ -1,4 +1,7 @@
-# מדרגות – multi-course study quiz (Android, Hebrew RTL)
+# The Road To 100 – multi-course study quiz (Android, Hebrew RTL)
+
+(Formerly "מדרגות". The app id `com.plap.studystairs` and the `madregot` keystore keep their old names on purpose:
+updates must use the same id and signing key.)
 
 An Android app: one Activity hosting a WebView that runs a self-contained HTML/JS game from `app/assets`.
 Pick a course, the topics, and real or generated questions. Every correct answer is one stair up, and a wrong
@@ -104,7 +107,7 @@ no "all/none of the above", an explanation of at most 2 sentences, and no duplic
 
 ```bash
 export ANDROID_HOME=/path/to/android-sdk   # needs build-tools/<ver>/ and platforms/android-35/android.jar
-tools/build.sh --bump          # bump versionCode, validate, build, sign -> build/outputs/madregot-v2.0-N.apk
+tools/build.sh --bump          # bump versionCode, validate, build, sign -> build/outputs/the-road-to-100-vX.Y-N.apk
 tools/build.sh --bump --test   # also run the Playwright test first (pip install playwright; uses installed Chrome)
 ```
 
@@ -148,11 +151,11 @@ Adding or swapping files needs no code changes; `validate_data.py` checks the ma
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/madregot-v3.0-3-debug.apk
+adb install -r build/outputs/the-road-to-100-v3.1-4-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/madregot-v3.0-3.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v3.1-4.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

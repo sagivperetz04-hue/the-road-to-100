@@ -216,7 +216,17 @@ async def run(chrome, shots):
         # background music from audio/manifest.json starts on the first screen
         await page.wait_for_function("(() => { const m = Sound.musicState(); return m.scene === 'menu' && m.playing && m.time > 0.2; })()", timeout=8000)
         bg = await page.evaluate("Sound.musicState()")
-        check(bg["file"] == "music/papa-dont-preach.mp3", f"background music plays on the menu ({bg['file']})")
+        songs = ("music/papa-dont-preach.mp3", "music/bass-persuades.mp3")
+        check(bg["file"] in songs, f"background music plays on the menu ({bg['file']})")
+        # shuffle: when a song ends the next one starts by itself (played at 16x so it ends quickly)
+        await page.evaluate("Sound.debugSpeed(16)")
+        try:
+            await page.wait_for_function(f"(() => {{ const m = Sound.musicState(); return m.playing && m.file && m.file !== {bg['file']!r}; }})()", timeout=40000)
+            nx = await page.evaluate("Sound.musicState()")
+            check(nx["file"] in songs and nx["file"] != bg["file"], f"when a song ends the next one plays ({bg['file']} -> {nx['file']})")
+        except Exception:
+            check(False, f"when a song ends the next one plays (still {await page.evaluate('Sound.musicState()')})")
+        bg = await page.evaluate("Sound.musicState()")
 
         # topics toggle logic
         await s.open_course("fixture-course")

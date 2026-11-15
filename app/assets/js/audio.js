@@ -51,7 +51,34 @@
   /* ------------------------------------------------------------ background music */
   const sfxFiles = {};     // kind -> { file, volume, el }
   let lastSfx = null;
-  const music = { tracks: {}, scene: null, el: null, track: null, index: {}, fadeIv: 0, ducked: false, duckTimer: 0, paused: false };
+  const music = { tracks: {}, scene: null, el: null, track: null, index: {}, fadeIv: 0, ducked: false, duckTimer: 0, paused: false,
+    bags: {}, lastFile: null, watch: 0 };
+
+  /** Shuffle: every song once per round in random order, never the same song twice in a row.
+      Scenes with the same list (menu and game) share one round. */
+  function nextIndex(list) {
+    if (list.length === 1) return 0;
+    const key = list.map((t) => t.file).join("|");
+    let bag = music.bags[key];
+    if (!bag || !bag.length) {
+      bag = list.map((_, i) => i);
+      for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+      if (list[bag[0]].file === music.lastFile) bag.push(bag.shift());   // don't repeat the song that just ended
+      music.bags[key] = bag;
+    }
+    return bag.shift();
+  }
+
+  /** Some Android WebViews don't fire "ended" for streamed assets: every 1.5 s, notice a song that ran out and move on. */
+  function watchEnd() {
+    clearInterval(music.watch);
+    music.watch = setInterval(() => {
+      const el = music.el;
+      if (!el || music.paused) return;
+      const done = el.ended || (el.paused && el.duration > 0 && isFinite(el.duration) && el.currentTime >= el.duration - 0.6);
+      if (done) el.dispatchEvent(new Event("ended"));
+    }, 1500);
+  }
 
   const musicOn = () => Store.sound && Store.music;
   const target = () => (music.track ? (music.track.volume != null ? music.track.volume : MUSIC_VOL) : MUSIC_VOL) * (music.ducked ? DUCK : 1);
@@ -73,14 +100,16 @@
   function startTrack(scene) {
     const list = music.tracks[scene] || [];
     if (!list.length) return;
-    const i = (music.index[scene] = ((music.index[scene] == null ? -1 : music.index[scene]) + 1) % list.length);
+    const i = (music.index[scene] = nextIndex(list));
     const t = list[i];
+    music.lastFile = t.file;
     const el = new Audio("audio/" + t.file);
     el.preload = "auto";
     el.loop = list.length === 1 && t.loop !== false;
     el.volume = 0;
     el.addEventListener("ended", () => {
-      if (music.el !== el) return;
+      if (music.el !== el || el.dataset.done) return;
+      el.dataset.done = "1";
       dropEl(el); music.el = null;
       const now = music.scene, nowList = music.tracks[now] || [];
       if (nowList.length === 1 && nowList[0].loop === false) { music.track = null; music.played = now; return; }   // one-shot: done
@@ -88,6 +117,7 @@
     });
     el.addEventListener("error", () => { if (music.el === el) { music.el = null; music.track = null; } });
     music.el = el; music.track = t;
+    watchEnd();
     const p = el.play();
     if (p && p.catch) p.catch(() => {});
     fadeTo(el, target(), FADE_MS);
@@ -173,6 +203,8 @@
     /** App went to the background / came back (also called from MainActivity.onPause/onResume). */
     pause() { stopAll(); pauseMusic(); },
     resume() { resumeMusic(); },
+    /** For tests: play the current song faster, to reach its end quickly. */
+    debugSpeed(rate) { if (music.el) music.el.playbackRate = rate; return !!music.el; },
     /** For tests: the last sound effect asked for, and which file played it (null = built-in). */
     sfxState() { return lastSfx; },
     /** True when the manifest lists music for this scene ("menu" | "game" | "summit"). */

@@ -5,7 +5,7 @@ Needs a DEBUG build (tools/build.sh --debuggable) installed and running: only de
 to DevTools. Release builds are unaffected.
 
     tools/build.sh --debuggable
-    adb install -r build/outputs/madregot-v<ver>-<code>-debug.apk
+    adb install -r build/outputs/the-road-to-100-v<ver>-<code>-debug.apk
     python3 tests/device_test.py [--adb path/to/adb] [--shots build/device-shots]
 
 Checks, on the device's own WebView: ground contact at the start / on a stair / after a fall, a fall resets the
@@ -82,6 +82,15 @@ async def main(adb, shots):
         ua = await page.evaluate("navigator.userAgent")
         e2e.check("Android" in ua and "wv" in ua, f"running in the device's Android WebView ({ua.split('Chrome/')[-1].split(' ')[0]})")
         best_before = await page.locator(".best-pill").all_inner_texts()
+        # background songs: when one ends the next starts (played fast so it ends quickly)
+        await page.wait_for_function("Sound.musicState().playing", timeout=15000)
+        first = (await page.evaluate("Sound.musicState()"))["file"]
+        await page.evaluate("Sound.debugSpeed(16)")
+        try:
+            await page.wait_for_function(f"(() => {{ const m = Sound.musicState(); return m.playing && m.file && m.file !== {first!r}; }})()", timeout=45000)
+            e2e.check(True, f"device: when a song ends the next one plays ({first} -> {(await page.evaluate('Sound.musicState()'))['file']})")
+        except Exception:
+            e2e.check(False, f"device: when a song ends the next one plays (stuck: {await page.evaluate('Sound.musicState()')})")
         screencap("1-courses")
 
         cid = await page.get_attribute(".course-row >> nth=0", "data-id")

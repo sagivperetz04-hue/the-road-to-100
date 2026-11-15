@@ -91,9 +91,9 @@
     const deco = el("g", { class: "ground-deco" }, world);
     if (theme === "pink") {
       // lollipops instead of bushes, and a unicorn waiting next to the first stair
-      deco.innerHTML = [[58, "#FF4FA3", "#FFFFFF", 9, 24], [168, "#A77BFF", "#FFD84D", 8, 20], [300, "#FFB020", "#FF4FA3", 10, 28], [-1080, "#3BA4F0", "#FFFFFF", 9, 24]]
+      deco.innerHTML = [[142, "#FF4FA3", "#FFFFFF", 9, 24], [190, "#A77BFF", "#FFD84D", 8, 20], [300, "#FFB020", "#FF4FA3", 10, 28], [-1080, "#3BA4F0", "#FFFFFF", 9, 24]]
         .map(([x, c1, c2, r, h]) => `<g transform="translate(${x} ${GROUND})">${Art.lollipop({ r, h, c1, c2 })}</g>`).join("")
-        + `<g transform="translate(112 ${GROUND})">${Art.unicorn({ scale: .82 })}</g>`;
+        + `<g transform="translate(78 ${GROUND})">${Art.unicorn({ scale: .82 })}</g>`;
     } else {
       deco.innerHTML = [[70, 1], [150, .8], [-1080, .9], [300, 1.1]].map(([bx, s]) =>
         `<g transform="translate(${bx} ${GROUND}) scale(${s})"><ellipse cx="0" cy="-6" rx="14" ry="7" fill="${P.bush[0]}"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="${P.bush[1]}"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="${P.bush[1]}"/></g>`).join("")

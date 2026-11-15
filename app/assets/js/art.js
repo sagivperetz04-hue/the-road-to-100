@@ -130,14 +130,14 @@
     const u = `bn${++bannerN}`;   // gradient ids must be unique: several banners can be on screen at once
     // stairs rise to the left, like the game's staircase (RTL)
     const stairs = [0, 1, 2, 3].map((i) => `<rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="${i * 16 + 40}" rx="3" fill="url(#${u}Step)"/><rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="4" rx="2" fill="${P.stepTop}"/>`).join("");
-    let extra = "";
+    let extra = "", front = "";   // extra: in the sky, behind the hills; front: standing on the grass, drawn last
     if (theme === "dark") {
       extra = `<g transform="translate(330 42)">${moon(15)}</g>` + [[30, 20, 3], [120, 30, 2.4], [160, 16, 3.2], [200, 44, 2], [330, 22, 2.6], [372, 52, 2.2], [98, 66, 1.8], [250, 30, 2]].map(([x, y, s]) => star(x, y, s)).join("");
     } else if (theme === "pink") {
       extra = `<g transform="translate(214 136)">${rainbow(112, 9)}</g><g transform="translate(336 46)">${sunny(17)}</g>`
-        + `<g transform="translate(250 135)">${unicorn({ scale: .95 })}</g>`
-        + `<g transform="translate(376 136)">${lollipop({ r: 8, h: 18, c1: "#FF4FA3" })}</g><g transform="translate(190 136)">${lollipop({ r: 7, h: 14, c1: "#A77BFF", c2: "#FFD84D" })}</g>`
         + heart(150, 40, 1, "#FF6FB5") + heart(270, 22, .8, "#FFFFFF") + heart(300, 86, .7, "#FF8FC6");
+      front = `<g transform="translate(250 135)">${unicorn({ scale: .95 })}</g>`
+        + `<g transform="translate(376 135)">${lollipop({ r: 8, h: 18, c1: "#FF4FA3" })}</g><g transform="translate(190 135)">${lollipop({ r: 7, h: 14, c1: "#A77BFF", c2: "#FFD84D" })}</g>`;
     } else {
       extra = `<g transform="translate(334 44)"><circle r="40" fill="url(#sunGlow)"/><circle r="16" fill="#FFE066"/></g>`;
     }
@@ -151,6 +151,7 @@
       <path d="M-10 160 L60 96 L130 140 L210 84 L290 150 L410 96 L410 160 Z" fill="${P.far[0]}" opacity=".7"/>
       ${stairs}
       <rect x="-10" y="134" width="420" height="40" fill="url(#${u}Grass)"/><rect x="-10" y="134" width="420" height="3" fill="${P.grassTop}"/>
+      ${front}
       <g transform="translate(59 70)">${climber(.95)}</g>
     </svg>`;
   }
