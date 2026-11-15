@@ -5,6 +5,7 @@
   "subtitle": "מבראשית ועד ליבוביץ",
   "color": "#5856D6",
   "icon": "scroll",
+  "idPrefix": "west-a",
   "topics": [
     {
       "id": "genesis",

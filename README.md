@@ -30,14 +30,52 @@ tests/
 keystore/madregot-release.jks   signing key. Keep it: updates must be signed with the same key.
 ```
 
-## Add a course (no code changes)
+## Add courses, topics and questions (no code changes)
 
-1. Create `app/assets/data/<folder>/` with `course.json`, `questions-real.json` (can be `[]`) and `questions-generated.json`.
-2. Add one line to `app/assets/data/courses.json`:
-   `{ "id": "my-course", "code": "0123456789", "name": "שם הקורס", "folder": "my-course" }`
-3. Run `python3 tools/validate_data.py`, then `tools/build.sh --bump`.
+`tools/content.py` does it for you: it writes the JSON, picks ids, checks everything with the build's own rules
+(plus duplicate questions) before writing, and runs the validator at the end.
 
-`course.json` also accepts the optional fields `subtitle`, `color` (hex), `icon` (`columns`, `scroll`, `book`) and per-topic `note`.
+```bash
+python3 tools/content.py courses          # what exists: courses, topics (ids + names), question counts, sources
+
+# a new course, with its topics (נושאים)
+python3 tools/content.py add-course art-history-b --name "תולדות האמנות ב'" --code 0881120702 \
+    --prefix art-b --color "#FF2D55" --icon columns --subtitle "מהרנסנס עד הבארוק" \
+    --topic "renaissance=הרנסנס" --topic "baroque=הבארוק"
+
+# one more topic; --order puts it at that position (default: last)
+python3 tools/content.py add-topic art-history-b mannerism --name "מנייריזם" --note "בין הרנסנס לבארוק" --order 2
+
+# one question (--topic takes the id or the Hebrew name; --source real is the default)
+python3 tools/content.py add-question art-history-b --topic הרנסנס \
+    --q "מי צייר את תקרת הקפלה הסיסטינית?" --correct "מיכלאנג'לו" \
+    --wrong "רפאל" --wrong "לאונרדו" --wrong "טיציאן" \
+    --explanation "מיכלאנג'לו צייר את התקרה בין 1508 ל-1512." --ref "מבחן 2025 מועד א שאלה 2" --difficulty 1
+```
+
+**Many questions at once, from a spreadsheet** (the easiest way to add real exam questions):
+
+```bash
+python3 tools/content.py template arch-history-a          # writes arch-history-a-questions.csv and lists the topics
+# fill it in Excel or Google Sheets, save as "CSV UTF-8", then:
+python3 tools/content.py import arch-history-a arch-history-a-questions.csv --dry-run   # check only
+python3 tools/content.py import arch-history-a arch-history-a-questions.csv
+```
+
+Columns (Hebrew or English headers): נושא / topic, שאלה / question, תשובה נכונה / correct, מסיח 1–3 / wrong1–3,
+הסבר / explanation, מקור / ref, רמה / difficulty (1–3, default 2), סוג / source (אמיתית or מחוללת, default
+אמיתית). The answer order in the file does not matter; the app shuffles it. If any row has a problem, nothing is
+written and every problem is listed with its row number.
+
+Notes:
+- Ids are lowercase English (`art-history-b`, `rome-1`); names are free Hebrew text.
+- Question ids continue each course's numbering from `idPrefix` in `course.json` (`arch-a-real-0001`, …) and are
+  never reused, since progress is stored per id. Don't renumber them.
+- `add-course` and `add-topic` create an empty `tools/sources/<course>/<topic>.md` for the question generator.
+  Paste the material there, then run `generate_questions.py` (below).
+- `course.json` fields: `name`, `code`, optional `subtitle`, `color` (hex), `icon` (`columns`, `scroll`, `book`),
+  `idPrefix`, and per topic `id`, `name`, `order`, optional `note`.
+- Then build: `tools/build.sh --bump`. `tests/content_test.py` tests the tool on a throwaway copy.
 
 ## Question format
 

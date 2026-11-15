@@ -5,6 +5,7 @@
   "subtitle": "עד הנצרות הקדומה",
   "color": "#FF9500",
   "icon": "columns",
+  "idPrefix": "arch-a",
   "topics": [
     {
       "id": "stone-age",

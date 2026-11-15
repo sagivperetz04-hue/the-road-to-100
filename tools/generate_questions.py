@@ -16,6 +16,7 @@ import argparse, json, os, random, re, subprocess, sys, urllib.error, urllib.req
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from validate_data import summary_phrases  # noqa: E402  (same phrase list the build enforces)
+from content import id_allocator  # noqa: E402  (shared id numbering with tools/content.py)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA = os.path.join(ROOT, "app", "assets", "data")
@@ -166,10 +167,8 @@ def main():
 
     items = call_claude(prompt, a.model)
 
-    # ids continue the course's numbering, e.g. arch-a-gen-0186
-    nums = [int(m.group(2)) for q in questions for m in [re.match(r"^(.*-gen-)(\d+)$", q.get("id", ""))] if m]
-    prefix = next((re.match(r"^(.*-gen-)\d+$", q["id"]).group(1) for q in questions if re.match(r"^.*-gen-\d+$", q.get("id", ""))), f"{entry['id']}-gen-")
-    nxt = max(nums, default=0) + 1
+    # ids continue the course's numbering, e.g. arch-a-gen-0186 (course.json idPrefix, never reused)
+    next_id = id_allocator(course, folder, "generated")
     added, skipped = 0, []
     rng = random.Random()
     for it in items:
@@ -182,12 +181,12 @@ def main():
         opts = [str(o).strip() for o in it["options"]]
         correct = opts[0]
         rng.shuffle(opts)
-        questions.append({"id": f"{prefix}{nxt:04d}", "topic": a.topic, "source": "generated", "q": it["q"].strip(),
+        questions.append({"id": next_id(), "topic": a.topic, "source": "generated", "q": it["q"].strip(),
                           "options": opts, "answer": opts.index(correct), "explanation": it["explanation"].strip(),
                           "ref": ref, "difficulty": int(it["difficulty"])})
-        seen.add(key); nxt += 1; added += 1
+        seen.add(key); added += 1
 
-    with open(gen_path, "w", encoding="utf-8") as f:
+    with open(gen_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(questions, f, ensure_ascii=False, indent=1)
     print(f"added {added} question(s) to {entry['folder']}/{a.topic}; skipped {len(skipped)}" + (f" ({', '.join(sorted(set(skipped)))})" if skipped else ""))
     sys.exit(subprocess.call([sys.executable, os.path.join(ROOT, "tools", "validate_data.py")]))
