@@ -126,11 +126,42 @@
     });
   }
 
+  /* ------------------------------------------------------------------ theme picker (bottom sheet) */
+  const THEME_INFO = [
+    { id: "auto", name: "אוטומטי", sub: "לפי הטלפון: בהיר או כהה" },
+    { id: "light", name: "בהיר", sub: "שמיים כחולים ושמש" },
+    { id: "dark", name: "כהה", sub: "לילה, ירח וכוכבים" },
+    { id: "pink", name: "ורוד", sub: "קשת, סוכריות וחדי־קרן" },
+  ];
+  function themeSheet() {
+    const layer = h(`<div class="dim-layer sheet-layer" role="dialog" aria-modal="true" aria-labelledby="th-t">
+      <div class="sheet"><div class="grabber"></div><h2 id="th-t">ערכת צבעים</h2><p>איך המשחק ייראה. אפשר להחליף מתי שרוצים.</p>
+        <div class="theme-grid">${THEME_INFO.map((t) => `<button class="theme-opt" data-theme-opt="${t.id}" aria-pressed="false">
+          <span class="tp-art ${t.id === "auto" ? "split" : ""}" style="display:block">${t.id === "auto" ? `<div>${Art.banner("light")}</div><div>${Art.banner("dark")}</div>` : Art.banner(t.id)}</span>
+          <span class="tp-label"><span><span class="tp-name">${esc(t.name)}</span><span class="tp-sub">${esc(t.sub)}</span></span>${Icons.check().replace('class="check"', 'class="tp-check"')}</span>
+        </button>`).join("")}</div></div></div>`);
+    const paint = () => $$(".theme-opt", layer).forEach((b) => { const on = b.dataset.themeOpt === Theme.setting; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    const close = () => { layer.remove(); overlays.splice(overlays.indexOf(entry), 1); };
+    const entry = { onBack: close };
+    overlays.push(entry);
+    layer.addEventListener("click", (e) => { if (e.target === layer) { Sound.sfx("tap"); close(); } });
+    $$(".theme-opt", layer).forEach((b) => b.addEventListener("click", () => {
+      Sound.sfx("tap"); haptic("tap");
+      Theme.set(b.dataset.themeOpt);
+      paint();
+    }));
+    paint();
+    $("#overlay-root").appendChild(layer);
+    const cur = $(".theme-opt.on", layer);
+    if (cur) cur.focus({ preventScroll: true });
+  }
+
   /* ------------------------------------------------------------------ screen 1: courses */
   function coursesScreen() {
     const el = h(`<section data-screen="courses">
-      ${navbar({ title: "בחרי קורס", action: `<span class="nav-actions">${Sound.hasMusic ? '<button class="nav-action" data-act="music" aria-label="מוזיקה"></button>' : ""}<button class="nav-action" data-act="sound" aria-label="צלילים"></button></span>` })}
+      ${navbar({ title: "בחרי קורס", action: `<span class="nav-actions"><button class="nav-action" data-act="theme" aria-label="ערכת צבעים">${Icons.palette()}</button>${Sound.hasMusic ? '<button class="nav-action" data-act="music" aria-label="מוזיקה"></button>' : ""}<button class="nav-action" data-act="sound" aria-label="צלילים"></button></span>` })}
       <div class="scroller">
+        <div class="banner" data-banner aria-hidden="true"></div>
         <div class="large-title"><h1>בחרי קורס</h1><p>20 תשובות נכונות ברצף = פסגה.</p></div>
         <div class="group" data-list></div>
         <div class="section-footer">ההתקדמות נשמרת במכשיר הזה.</div>
@@ -147,6 +178,11 @@
       paintMusic();
     }
 
+    const paintBanner = () => { $("[data-banner]", el).innerHTML = Art.banner(Theme.current); };
+    paintBanner();
+    Theme.onChange(paintBanner);
+    $('[data-act="theme"]', el).addEventListener("click", () => { Sound.unlock(); Sound.sfx("tap"); haptic("tap"); themeSheet(); });
+
     function render() {
       const list = $("[data-list]", el);
       list.innerHTML = Data.courses.map((c) => {
@@ -155,7 +191,7 @@
           <span class="icon-tile" style="background:${courseColor(c)}">${(Icons[c.icon] || Icons.book)()}</span>
           <span class="row-body"><span class="row-title">${esc(c.name)}</span>
             <span class="row-sub">${ltr(c.code)} · ${nTopics(c.topics.length)} · ${nQuestions(c.questions.length)}</span>
-            <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span></span></span>
+            <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span><span class="course-progress" style="--p:${(Math.min(best, GOAL) / GOAL).toFixed(2)}" aria-hidden="true"><i></i></span></span></span>
           <span class="row-trail">${Icons.chevron()}</span>
         </button>`;
       }).join("");
@@ -321,7 +357,7 @@
     </section>`);
 
     const sceneBox = $("[data-scene]", el);
-    const scene = Scene.create(sceneBox, { color: course.color || "#FF9500" });
+    const scene = Scene.create(sceneBox, { color: course.color || "#FF9500", theme: Theme.current });
     const stepCap = h('<span class="caption-step" data-stepcap></span>');
     sceneBox.appendChild(stepCap);
     const card = $("[data-card]", el);
@@ -393,6 +429,7 @@
       if (ok) {
         streak += 1;
         Sound.sfx("correct"); haptic("success");
+        celebrate(btn || $(`.opt[data-oi="${current.answer}"]`, card));
         Store.recordStreak(course.id, source, streak);
         paintRing(true);
         const hop = scene.hop();
@@ -408,6 +445,25 @@
       }
       foot.classList.add("show");
       $("[data-next]", el).focus({ preventScroll: true });
+    }
+
+    /** A star burst from the answer button and a "+1" by the streak ring. */
+    function celebrate(btn) {
+      if (reduced() || !btn) return;
+      const box = el.getBoundingClientRect(), r = btn.getBoundingClientRect();
+      const burst = h('<div class="burst" aria-hidden="true"></div>');
+      burst.style.left = `${r.left - box.left + 30}px`; burst.style.top = `${r.top - box.top + r.height / 2}px`;
+      const colors = ["#FFC93C", "#FF4FA3", "#4FB8FF", "#5FD68A", "#A77BFF"];
+      burst.innerHTML = Array.from({ length: 12 }, (_, i) => {
+        const a = (i / 12) * Math.PI * 2 + Math.random() * .4, d = 42 + Math.random() * 38;
+        return `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--c:${colors[i % colors.length]};animation-delay:${(Math.random() * .06).toFixed(2)}s"></i>`;
+      }).join("");
+      el.appendChild(burst);
+      const ring = $("[data-ring]", el).getBoundingClientRect();
+      const plus = h('<div class="plus-one" aria-hidden="true">+1</div>');
+      plus.style.left = `${ring.left - box.left + ring.width / 2 - 12}px`; plus.style.top = `${ring.bottom - box.top + 2}px`;
+      el.appendChild(plus);
+      setTimeout(() => { burst.remove(); plus.remove(); }, 1100);
     }
 
     function confetti(host) {
@@ -446,8 +502,14 @@
       Sound.music("summit");
       Sound.sfx("correct"); haptic("success");
       setTimeout(() => { if (alive) showIsland(Sound.playClip(true)); }, 250);
+      const theme = Theme.current;
+      const buddy = (flip) => theme === "pink"
+        ? `<svg class="buddy" viewBox="-40 -70 80 74" aria-hidden="true"><defs>${Art.DEFS}</defs>${Art.unicorn({ flip })}</svg>`
+        : "";
       const ov = h(`<div class="summit" role="dialog" aria-modal="true" aria-labelledby="sm-t">
+        <div class="rays" aria-hidden="true"></div>
         ${Icons.crown()}
+        <div class="stage">${buddy(true)}
         <svg class="hero" viewBox="-40 -64 80 70" aria-hidden="true"><defs><radialGradient id="heroGrad2" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF9BD2"/><stop offset=".55" stop-color="#E05CC8"/><stop offset="1" stop-color="#9B3FC4"/></radialGradient></defs>
           <ellipse cx="-6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/><ellipse cx="6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/>
           <path d="M-9 -29 L-12 -40 L-3 -32 Z M9 -29 L12 -40 L3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8"/>
@@ -455,7 +517,7 @@
           <path d="M-14 -16 L-24 -30 M14 -16 L24 -30" stroke="#C04FC9" stroke-width="6" stroke-linecap="round"/>
           <path d="M-9 -20 Q-5.5 -25 -2 -20 M2 -20 Q5.5 -25 9 -20" fill="none" stroke="#1c1c1e" stroke-width="1.8" stroke-linecap="round"/>
           <path d="M-6 -14 Q0 -6.5 6 -14 Z" fill="#5B1A61"/>
-          <circle cx="-10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/><circle cx="10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/></svg>
+          <circle cx="-10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/><circle cx="10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/></svg>${buddy(false)}</div>
         <div class="kicker">${GOAL} תשובות נכונות ברצף!</div>
         <h2 id="sm-t">ציציפלצת האולטימטיבית</h2>
         <p>${esc(course.name)}</p>

@@ -122,6 +122,21 @@ Progress is stored in `localStorage` on a fixed in-app origin, so it survives ap
 - per question: times seen and times answered wrong. Questions she got wrong come up about twice as often,
   and the same question never appears twice in a row.
 
+## Themes
+
+Four themes, picked with the palette button on the first screen and saved with the progress: **auto** (follows the
+phone's dark mode, through `AndroidBridge.isNightMode()`), **light**, **dark** and **pink** (sunshine, rainbow,
+lollipops and unicorns). The theme is set as `<html data-theme="light|dark|pink">`:
+
+- `css/app.css`: colour tokens per theme at the top; every component uses them;
+- `js/art.js`: the drawings and `Art.PALETTES` (scene, banner and picker colours);
+- `js/scene.js`: draws the staircase world in the current theme;
+- `js/theme.js`: the setting, the "auto" logic, and Android's status/navigation bar colours.
+
+To add a theme: add a `[data-theme="name"]` token block in `app.css`, a palette in `Art.PALETTES`, a colour in
+`BARS` in `theme.js`, and an entry in `THEME_INFO` in `app.js`. The e2e test screenshots every screen in every
+theme (`build/screenshots/theme-*`).
+
 ## Music
 
 Background music (per screen: menu / game / summit) and the 5-second "Now Playing" clips are listed in

@@ -337,7 +337,63 @@ async def run(chrome, shots):
             await shot("10-game-course2")
             check(not s.problems, "no console errors / warnings" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
             await ctx.close()
-        # ---------------------------------------------------------------- 3. background music (generated test tracks)
+        # ---------------------------------------------------------------- 3. themes: auto / light / dark / pink
+        print("\n[themes] picker, saved setting, every screen in every theme")
+        for scheme, want in (("dark", "dark"), ("light", "light")):
+            ctx = await browser.new_context(viewport={"width": 393, "height": 851}, color_scheme=scheme)
+            page = await ctx.new_page()
+            await page.goto(url); await page.wait_for_selector(".course-row")
+            check(await page.get_attribute("html", "data-theme") == want, f"auto theme follows the system ({scheme} -> {want})")
+            await ctx.close()
+        for w, hgt in ((393, 851), (360, 640)):
+            ctx = await browser.new_context(viewport={"width": w, "height": hgt}, device_scale_factor=2, has_touch=True, reduced_motion="reduce")
+            page = await ctx.new_page()
+            s = Session(page, answers)
+            await page.goto(url); await page.wait_for_selector(".course-row")
+            for theme in ("light", "dark", "pink"):
+                tag = f"{w}x{hgt} {theme}"
+                await page.click('[data-act="theme"]'); await page.wait_for_selector(".sheet .theme-opt")
+                if theme == "light":
+                    check(await page.locator(".theme-opt").count() == 4, "theme picker offers 4 choices")
+                    await shot_page(page, shots, f"theme-{w}x{hgt}-picker")
+                await page.click(f'.theme-opt[data-theme-opt="{theme}"]')
+                check(await page.get_attribute("html", "data-theme") == theme, f"{tag}: picking it sets the theme")
+                check(await page.evaluate("JSON.parse(localStorage.getItem('stairs.v1')).settings.theme") == theme, f"{tag}: the choice is saved")
+                await page.evaluate("appBack()")
+                check(await page.locator(".sheet").count() == 0, f"{tag}: Back closes the picker")
+                await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-1-courses")
+                await s.open_course("arch-history-a"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-2-topics")
+                await page.click("[data-go]"); await s.wait_screen("source"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-3-source")
+                await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+                await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
+                check(await page.get_attribute("[data-scene] svg", "data-theme") == theme, f"{tag}: the scene is drawn in the theme")
+                check_feet(await ground_report(page), 0, f"{tag}: game start")
+                if theme == "pink":
+                    n_uni = await page.locator("[data-scene] .unicorn").count(); n_lol = await page.locator("[data-scene] .lollipop").count()
+                    check(n_uni >= 2 and n_lol >= 3 and await page.locator("[data-scene] .rainbow").count() == 1, f"{tag}: rainbow, {n_uni} unicorns, {n_lol} lollipops")
+                await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-4-game")
+                await s.answer(True); await page.wait_for_selector("[data-foot].show"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-5-correct")
+                check_feet(await ground_report(page), 1, f"{tag}: after a correct answer")
+                await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show")
+                check_feet(await ground_report(page), 0, f"{tag}: after a fall")
+                await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-6-wrong")
+                if w == 393:
+                    await s.next(); await s.climb_to_summit(tag)
+                    await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-7-summit")
+                    if theme == "pink":
+                        check(await page.locator(".summit .buddy").count() == 2, f"{tag}: unicorns join the summit")
+                    await page.click("[data-menu]"); await s.wait_screen("source")
+                else:
+                    await s.next(); await s.answer(True)          # a streak of 1, so leaving asks first
+                    await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert")
+                    await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-7-leave-dialog")
+                    await page.click("text=צאי"); await s.wait_screen("source")
+                await page.evaluate("appBack()"); await s.wait_screen("topics")
+                await page.evaluate("appBack()"); await s.wait_screen("courses")
+            check(not s.problems, f"themes {w}x{hgt}: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
+            await ctx.close()
+
+        # ---------------------------------------------------------------- 4. background music (generated test tracks)
         print("\n[music] background music infrastructure")
         msite = make_music_site(site)
         mhttpd, murl = serve(msite)

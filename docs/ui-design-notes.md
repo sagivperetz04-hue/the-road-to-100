@@ -5,6 +5,16 @@ Playwright at 360×640 and 393×851. The screenshots are in [`device-shots/`](de
 **Fixed already:** the floating creature (compare `0-v2-floating.png` with `2-start.png`) and the
 summary-dependent questions.
 
+**Game-style redesign (later the same day):**
+- **Themes:** auto (follows the phone), light, dark and pink (sunshine, rainbow, lollipops, unicorns). Pick one
+  with the palette button on the first screen.
+- **Look:** chunky 3D cards and buttons, gem letters on the answers, a themed banner, progress bars per course,
+  a star burst and a "+1" on correct answers, and a sunburst on the summit.
+- **From the list below:** the sun no longer sits behind the streak pill (item 3), and the scene is taller on
+  tall phones (part of item 4).
+- **Code:** colours live in `css/app.css` theme tokens and `Art.PALETTES` in `js/art.js`. The drawings (unicorn,
+  lollipop, rainbow, sun, moon, climber) are original and also live in `js/art.js`.
+
 Nothing below blocks a release. Ordered by how much each would improve the app.
 
 ## Worth doing next

@@ -13,7 +13,7 @@
     if (!data || typeof data !== "object") data = {};
     data.courses = data.courses || {};
     data.q = data.q || {};
-    data.settings = Object.assign({ sound: true, music: true }, data.settings || {});
+    data.settings = Object.assign({ sound: true, music: true, theme: "auto" }, data.settings || {});
     mem = data;
     return mem;
   }
@@ -38,6 +38,8 @@
   window.Store = {
     get sound() { return !!read().settings.sound; },
     set sound(v) { read().settings.sound = !!v; write(); },
+    get theme() { return read().settings.theme || "auto"; },
+    set theme(v) { read().settings.theme = String(v); write(); },
     get music() { return !!read().settings.music; },
     set music(v) { read().settings.music = !!v; write(); },
 

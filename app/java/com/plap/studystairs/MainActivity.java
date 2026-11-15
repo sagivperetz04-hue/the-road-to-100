@@ -2,6 +2,7 @@ package com.plap.studystairs;
 
 import android.app.Activity;
 import android.content.pm.ApplicationInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -30,7 +31,7 @@ import java.util.Map;
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String START_URL = "https://" + HOST + "/index.html";
-    private static final int BG = Color.rgb(0xF2, 0xF2, 0xF7);
+    private static final int BG = Color.rgb(0xEE, 0xF3, 0xFF);
 
     private WebView web;
 
@@ -71,14 +72,18 @@ public class MainActivity extends Activity {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private void styleSystemBars() {
+        applyBars(BG, true);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyBars(int color, boolean darkIcons) {
         Window w = getWindow();
-        w.setStatusBarColor(BG);
-        w.setNavigationBarColor(BG);
+        w.setStatusBarColor(color);
+        w.setNavigationBarColor(color);
         int flags = 0;
-        if (Build.VERSION.SDK_INT >= 23) flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        if (darkIcons && Build.VERSION.SDK_INT >= 23) flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (darkIcons && Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         w.getDecorView().setSystemUiVisibility(flags);
     }
 
@@ -127,6 +132,23 @@ public class MainActivity extends Activity {
 
     /** Small native helpers the page may call. */
     private final class Bridge {
+        /** For the "auto" theme: is the phone in dark mode? (The WebView itself always reports light.) */
+        @JavascriptInterface
+        public boolean isNightMode() {
+            return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        }
+
+        /** Colours the status and navigation bars to match the page's theme. */
+        @JavascriptInterface
+        public void setSystemBars(final String hex, final boolean darkIcons) {
+            runOnUiThread(() -> {
+                int c;
+                try { c = Color.parseColor(hex); } catch (IllegalArgumentException e) { return; }
+                applyBars(c, darkIcons);
+                if (web != null) web.setBackgroundColor(c);
+            });
+        }
+
         @JavascriptInterface
         public void haptic(final String kind) {
             runOnUiThread(() -> {

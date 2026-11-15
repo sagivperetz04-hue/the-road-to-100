@@ -3,7 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#F2F2F7">
+  <meta name="theme-color" content="#EEF3FF">
+  <script>
+    /* set the theme before the first paint (theme.js takes over once loaded) */
+    (function () {
+      var t = "auto";
+      try { t = (JSON.parse(localStorage.getItem("stairs.v1") || "{}").settings || {}).theme || "auto"; } catch (e) {}
+      if (t === "auto") {
+        var night = false;
+        try { night = window.AndroidBridge && AndroidBridge.isNightMode ? AndroidBridge.isNightMode() : matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) {}
+        t = night ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
   <title>מדרגות</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/app.css">
@@ -14,6 +27,8 @@
   <noscript>צריך JavaScript כדי לשחק.</noscript>
   <script src="js/icons.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/art.js"></script>
   <script src="js/data.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/scene.js"></script>

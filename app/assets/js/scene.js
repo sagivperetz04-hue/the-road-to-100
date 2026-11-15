@@ -60,56 +60,83 @@
   function build(container, opts) {
     const color = opts.color || "#FF9500";
     container.innerHTML = "";
-    const svg = el("svg", { viewBox: `0 0 ${VIEW_W} ${VIEW_H}`, preserveAspectRatio: "xMidYMid slice", role: "img", "aria-label": "מדרגות הטיפוס" }, container);
+    const theme = opts.theme || "light";
+    const P = Art.PALETTES[theme] || Art.PALETTES.light;
+    const svg = el("svg", { viewBox: `0 0 ${VIEW_W} ${VIEW_H}`, preserveAspectRatio: "xMidYMid slice", role: "img", "aria-label": "מדרגות הטיפוס", "data-theme": theme }, container);
+    // sky decorations sit at the top right, clear of the streak pill (top left) and the back button (top right corner)
+    const sky = theme === "dark"
+      ? `<g transform="translate(296 62)">${Art.moon(16)}</g>` + [[40, 30, 2.6], [110, 72, 2], [160, 22, 3], [212, 50, 2.2], [250, 18, 2.6], [350, 96, 2], [20, 100, 1.8], [190, 104, 1.6], [372, 40, 2.4]].map(([x, y, r]) => Art.star(x, y, r)).join("")
+      : theme === "pink"
+        ? `<g transform="translate(298 66)">${Art.sunny(17)}</g>`
+        : `<circle cx="298" cy="62" r="46" fill="url(#sunGlow)"/><circle cx="298" cy="62" r="17" fill="#FFE066"/>`;
     svg.innerHTML = `
-      <defs>
-        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7EC8FF"/><stop offset=".65" stop-color="#C9E8FF"/><stop offset="1" stop-color="#EAF4FF"/></linearGradient>
-        <radialGradient id="heroGrad" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF9BD2"/><stop offset=".55" stop-color="#E05CC8"/><stop offset="1" stop-color="#9B3FC4"/></radialGradient>
-        <linearGradient id="stepGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3E2C1"/><stop offset="1" stop-color="#DCC08E"/></linearGradient>
-        <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ED96B"/><stop offset="1" stop-color="#5DB54A"/></linearGradient>
-        <radialGradient id="sunGlow"><stop offset="0" stop-color="#FFF4B8"/><stop offset=".5" stop-color="#FFE066" stop-opacity=".6"/><stop offset="1" stop-color="#FFE066" stop-opacity="0"/></radialGradient>
+      <defs>${Art.DEFS}
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".65" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
+        <linearGradient id="stepGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.step[0]}"/><stop offset="1" stop-color="${P.step[1]}"/></linearGradient>
+        <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.grass[0]}"/><stop offset="1" stop-color="${P.grass[1]}"/></linearGradient>
       </defs>
-      <rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#skyGrad)"/>
-      <circle cx="78" cy="58" r="46" fill="url(#sunGlow)"/><circle cx="78" cy="58" r="17" fill="#FFE066"/>`;
+      <rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#skyGrad)"/>${sky}`;
     const far = el("g", {}, svg);
-    far.innerHTML = `
-      <path d="M-400 230 L-250 120 L-140 190 L-20 95 L110 185 L230 105 L360 190 L470 120 L640 230 Z" fill="#A9C8EC" opacity=".7"/>
-      <path d="M-400 240 L-300 170 L-180 215 L-60 150 L70 220 L190 160 L320 225 L450 165 L640 240 Z" fill="#8FB3DE" opacity=".6"/>`;
+    far.innerHTML = (theme === "pink" ? `<g transform="translate(150 214)">${Art.rainbow(150, 11)}</g>` : "") + `
+      <path d="M-400 230 L-250 120 L-140 190 L-20 95 L110 185 L230 105 L360 190 L470 120 L640 230 Z" fill="${P.far[0]}" opacity=".7"/>
+      <path d="M-400 240 L-300 170 L-180 215 L-60 150 L70 220 L190 160 L320 225 L450 165 L640 240 Z" fill="${P.far[1]}" opacity=".6"/>`;
     const clouds = el("g", { class: "clouds" }, svg);
-    clouds.innerHTML = [[60, 40, 1], [250, 26, .8], [400, 60, .9], [-120, 50, .85]].map(([x, y, s]) =>
-      `<g transform="translate(${x} ${y}) scale(${s})" opacity=".92"><ellipse cx="0" cy="0" rx="26" ry="10" fill="#fff"/><ellipse cx="14" cy="-6" rx="16" ry="11" fill="#fff"/><ellipse cx="-12" cy="-4" rx="12" ry="8" fill="#fff"/></g>`).join("");
+    clouds.innerHTML = [[60, 40, 1], [190, 26, .8], [400, 60, .9], [-120, 50, .85]].map(([x, y, s]) =>
+      `<g transform="translate(${x} ${y}) scale(${s})" opacity="${P.cloudOpacity}"><ellipse cx="0" cy="0" rx="26" ry="10" fill="${P.cloud}"/><ellipse cx="14" cy="-6" rx="16" ry="11" fill="${P.cloud}"/><ellipse cx="-12" cy="-4" rx="12" ry="8" fill="${P.cloud}"/></g>`).join("");
 
     const world = el("g", { class: "world" }, svg);
-    // ground with a few bushes
+    // the ground; its top edge is y = 0
     el("rect", { class: "ground", x: -1500, y: GROUND, width: 2400, height: 600, fill: "url(#grassGrad)" }, world);
-    el("rect", { x: -1500, y: GROUND, width: 2400, height: 4, fill: "#B5EB95" }, world);
-    for (const [bx, s] of [[70, 1], [150, .8], [-1080, .9], [300, 1.1]]) {
-      const b = el("g", { transform: `translate(${bx} ${GROUND}) scale(${s})` }, world);
-      b.innerHTML = '<ellipse cx="0" cy="-6" rx="14" ry="7" fill="#6CC456"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="#7FD266"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="#7FD266"/>';
+    el("rect", { x: -1500, y: GROUND, width: 2400, height: 4, fill: P.grassTop }, world);
+    const deco = el("g", { class: "ground-deco" }, world);
+    if (theme === "pink") {
+      // lollipops instead of bushes, and a unicorn waiting next to the first stair
+      deco.innerHTML = [[58, "#FF4FA3", "#FFFFFF", 9, 24], [168, "#A77BFF", "#FFD84D", 8, 20], [300, "#FFB020", "#FF4FA3", 10, 28], [-1080, "#3BA4F0", "#FFFFFF", 9, 24]]
+        .map(([x, c1, c2, r, h]) => `<g transform="translate(${x} ${GROUND})">${Art.lollipop({ r, h, c1, c2 })}</g>`).join("")
+        + `<g transform="translate(112 ${GROUND})">${Art.unicorn({ scale: .82 })}</g>`;
+    } else {
+      deco.innerHTML = [[70, 1], [150, .8], [-1080, .9], [300, 1.1]].map(([bx, s]) =>
+        `<g transform="translate(${bx} ${GROUND}) scale(${s})"><ellipse cx="0" cy="-6" rx="14" ry="7" fill="${P.bush[0]}"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="${P.bush[1]}"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="${P.bush[1]}"/></g>`).join("")
+        + (theme === "dark" ? [[40, -14], [96, -26], [180, -12], [250, -30]].map(([x, y]) => `<circle class="twinkle" style="animation-delay:-${(x % 7) / 3}s" cx="${x}" cy="${y}" r="1.6" fill="#FFF3A0"/>`).join("") : "");
     }
     // summit platform (wider top)
     const top = stepPos(STEPS);
     el("rect", { class: "step-block", x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: GROUND - top.y, fill: "url(#stepGrad)" }, world);
-    el("rect", { x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: 5, fill: "#FBF1DD" }, world);
+    el("rect", { x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: 5, fill: P.stepTop }, world);
     // steps
+    const SPRINKLES = ["#FF4FA3", "#FFB020", "#A77BFF", "#3BA4F0", "#33C9A0"];
     for (let i = STEPS - 1; i >= 1; i--) {
       const p = stepPos(i);
       el("rect", { class: "step-block", x: p.x - W / 2, y: p.y, width: W, height: GROUND - p.y, fill: "url(#stepGrad)" }, world);
-      el("rect", { x: p.x - W / 2, y: p.y, width: W, height: 5, fill: "#FBF1DD" }, world);
-      el("rect", { x: p.x + W / 2 - 4, y: p.y + 5, width: 4, height: GROUND - p.y - 5, fill: "rgba(150,110,60,.16)" }, world);
-      el("line", { x1: p.x + W / 2, y1: p.y, x2: p.x + W / 2, y2: p.y + H, stroke: "rgba(150,110,60,.32)", "stroke-width": 1 }, world);
+      el("rect", { x: p.x - W / 2, y: p.y, width: W, height: 5, fill: P.stepTop }, world);
+      el("rect", { x: p.x + W / 2 - 4, y: p.y + 5, width: 4, height: GROUND - p.y - 5, fill: P.stepEdge, opacity: .5 }, world);
+      el("line", { x1: p.x + W / 2, y1: p.y, x2: p.x + W / 2, y2: p.y + H, stroke: P.stepEdge, "stroke-width": 1 }, world);
+      if (theme === "pink") {
+        // candy sprinkles on each stair face
+        const g = el("g", {}, world);
+        g.innerHTML = [0, 1, 2].map((k) => {
+          const sx = p.x - W / 2 + 8 + ((i * 13 + k * 15) % (W - 14)), sy = p.y + 9 + ((i * 7 + k * 5) % 10);
+          return `<rect x="${sx}" y="${sy}" width="6" height="2.2" rx="1.1" fill="${SPRINKLES[(i + k) % SPRINKLES.length]}" transform="rotate(${(i * 37 + k * 50) % 180} ${sx + 3} ${sy + 1})"/>`;
+        }).join("");
+      }
       if (i % 5 === 0) {
-        const t = el("text", { x: p.x, y: p.y + 18, "text-anchor": "middle", "font-size": 11, "font-weight": 700, fill: "rgba(120,85,40,.8)", "font-family": "AppSans" }, world);
+        const t = el("text", { x: p.x, y: p.y + 18, "text-anchor": "middle", "font-size": 11, "font-weight": 800, fill: P.stepText, "font-family": "AppSans" }, world);
         t.textContent = String(i);
         const m = el("g", { transform: `translate(${p.x - W / 2 + 7} ${p.y})` }, world);
-        m.innerHTML = `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="#8A7354"/><path d="M.8 -21.5 L13 -17.5 L.8 -13.5 Z" fill="${color}" opacity=".85"/>`;
+        m.innerHTML = theme === "pink"
+          ? `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="#FFFFFF" stroke="rgba(214,60,140,.3)" stroke-width=".4"/>${Art.heart(7, -17, .9, color)}`
+          : `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="${theme === "dark" ? "#C3C5EC" : "#8A7354"}"/><path d="M.8 -21.5 L13 -17.5 L.8 -13.5 Z" fill="${color}" opacity=".85"/>`;
       }
     }
-    // summit flag
+    // summit flag (and, in pink, a unicorn waiting at the top)
     const flag = el("g", { class: "flag", transform: `translate(${top.x - 40} ${top.y})` }, world);
-    flag.innerHTML = `<rect x="-1.2" y="-62" width="2.4" height="62" rx="1.2" fill="#6E5A40"/>
+    flag.innerHTML = `<rect x="-1.2" y="-62" width="2.4" height="62" rx="1.2" fill="${theme === "dark" ? "#C3C5EC" : "#6E5A40"}"/>
       <path class="flag-cloth" d="M1 -61 C12 -65 20 -55 32 -59 L32 -41 C20 -37 12 -47 1 -43 Z" fill="${color}"/>
       <circle cx="0" cy="-63" r="2.8" fill="#FFD60A"/>`;
+    if (theme === "pink") {
+      const u = el("g", { transform: `translate(${top.x - 72} ${top.y})` }, world);
+      u.innerHTML = Art.unicorn({ scale: .78, flip: true });
+    }
     const glow = el("circle", { cx: top.x - 20, cy: top.y - 20, r: 46, fill: "url(#sunGlow)", opacity: 0 }, world);
 
     const hero = monster(world);

@@ -6,8 +6,8 @@
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:colorAccent">#007AFF</item>
-        <item name="android:colorPrimary">#F2F2F7</item>
-        <item name="android:colorPrimaryDark">#F2F2F7</item>
+        <item name="android:colorPrimary">#EEF3FF</item>
+        <item name="android:colorPrimaryDark">#EEF3FF</item>
     </style>
-    <color name="bg">#F2F2F7</color>
+    <color name="bg">#EEF3FF</color>
 </resources>
