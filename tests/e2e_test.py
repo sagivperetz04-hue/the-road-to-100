@@ -139,6 +139,17 @@ async def ground_report(page):
     }""")
 
 
+async def explain_clear(page, label):
+    """After answering, the whole explanation (down to its "מקור" line) must sit above the "next" bar."""
+    await page.wait_for_timeout(200)
+    r = await page.evaluate("""() => {
+      const ex = document.querySelector('[data-card] .explain'), foot = document.querySelector('[data-foot]');
+      if (!ex || !foot) return null;
+      return { ex: ex.getBoundingClientRect().bottom, foot: foot.getBoundingClientRect().top };
+    }""")
+    check(r is not None and r["ex"] <= r["foot"] + 1, f"{label}: explanation fully visible above the next button" + ("" if r is None else f" ({r['ex']:.0f} <= {r['foot']:.0f})"))
+
+
 def check_feet(g, step, label):
     want = step * 24
     check(abs(g["feet_gap"] - want) <= 0.6, f"{label}: feet {'on the grass' if step == 0 else f'on stair {step}'} (gap {g['feet_gap']:.2f}, want {want})")
@@ -317,9 +328,9 @@ async def run(chrome, shots):
             g = await ground_report(page)
             check_feet(g, 0, "game start")
             check(g["blocks"] == 20 and g["worst_block_gap"] <= 0.5, f"all {g['blocks']} stair blocks rest on the grass (worst gap {g['worst_block_gap']:.2f})")
-            await s.answer(True); await page.wait_for_selector("[data-foot].show"); await shot("5-correct")
+            await s.answer(True); await page.wait_for_selector("[data-foot].show"); await explain_clear(page, f"{w}x{hgt} correct"); await shot("5-correct")
             check_feet(await ground_report(page), 1, "after one correct answer")
-            await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show"); await shot("6-wrong")
+            await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show"); await explain_clear(page, f"{w}x{hgt} wrong"); await shot("6-wrong")
             check_feet(await ground_report(page), 0, "after a fall")
             await s.next(); await s.answer(True); await s.next()
             await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await shot("7-leave-dialog")
@@ -372,9 +383,10 @@ async def run(chrome, shots):
                     n_uni = await page.locator("[data-scene] .unicorn").count(); n_lol = await page.locator("[data-scene] .lollipop").count()
                     check(n_uni >= 2 and n_lol >= 3 and await page.locator("[data-scene] .rainbow").count() == 1, f"{tag}: rainbow, {n_uni} unicorns, {n_lol} lollipops")
                 await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-4-game")
-                await s.answer(True); await page.wait_for_selector("[data-foot].show"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-5-correct")
+                await s.answer(True); await page.wait_for_selector("[data-foot].show"); await explain_clear(page, f"{tag} correct"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-5-correct")
                 check_feet(await ground_report(page), 1, f"{tag}: after a correct answer")
                 await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show")
+                await explain_clear(page, f"{tag} wrong")
                 check_feet(await ground_report(page), 0, f"{tag}: after a fall")
                 await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-6-wrong")
                 if w == 393:

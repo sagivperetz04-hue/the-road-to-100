@@ -205,6 +205,18 @@
         const to = stepPos(0);
         const cam0 = { ...state.cam };
         face("oops");
+        if (state.step === 0) {
+          // already on the ground: a short stumble instead of a full fall that goes nowhere
+          await animate(420, (t) => {
+            const k = 1 - t;
+            state.x = from.x + Math.sin(t * Math.PI * 4) * 3 * k;
+            state.y = from.y - Math.sin(Math.PI * t) * 6;
+            state.rot = Math.sin(t * Math.PI * 2) * 14 * k;
+          });
+          state.x = from.x; state.y = from.y; state.rot = 0; apply();
+          setTimeout(() => { if (state.alive && state.step < STEPS) face("happy"); }, 900);
+          return;
+        }
         state.step = 0;
         const dur = 520 + Math.min(20, Math.abs(from.x) / W) * 26;
         await animate(dur, (t) => {

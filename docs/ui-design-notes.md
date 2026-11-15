@@ -12,6 +12,20 @@ summary-dependent questions.
   a star burst and a "+1" on correct answers, and a sunburst on the summit.
 - **From the list below:** the sun no longer sits behind the streak pill (item 3), and the scene is taller on
   tall phones (part of item 4).
+- **After a ChatGPT design review** (the "Design critique improvements" chat in your ChatGPT history):
+  - the explanation is always fully visible above the "next" button (item 2 below, now tested);
+  - the options you didn't pick stay readable after answering;
+  - lighter type for questions, answers and explanations;
+  - thinner answer edges and a softer gloss;
+  - a shorter scene, so the question starts higher;
+  - course details wrap as whole items, and the progress bar shows only once there's a best streak;
+  - the unavailable source card is a readable dashed outline;
+  - the summit's line is readable, its rays calmer, and the streak stat leads;
+  - fainter background patterns, softer grass in light mode, a hairline around dark-mode cards;
+  - a short stumble instead of a full fall when a wrong answer comes at streak 0.
+
+  Not taken: neutral answer letters (the coloured gems are the game look), a 20-segment track (the ring already
+  shows progress), and removing the "Now Playing" island (it's the app's own feature, not a phone notch).
 - **Code:** colours live in `css/app.css` theme tokens and `Art.PALETTES` in `js/art.js`. The drawings (unicorn,
   lollipop, rainbow, sun, moon, climber) are original and also live in `js/art.js`.
 

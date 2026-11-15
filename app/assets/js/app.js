@@ -190,8 +190,8 @@
         return `<button class="row course-row" data-id="${esc(c.id)}">
           <span class="icon-tile" style="background:${courseColor(c)}">${(Icons[c.icon] || Icons.book)()}</span>
           <span class="row-body"><span class="row-title">${esc(c.name)}</span>
-            <span class="row-sub">${ltr(c.code)} · ${nTopics(c.topics.length)} · ${nQuestions(c.questions.length)}</span>
-            <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span><span class="course-progress" style="--p:${(Math.min(best, GOAL) / GOAL).toFixed(2)}" aria-hidden="true"><i></i></span></span></span>
+            <span class="row-sub"><span class="meta-item">${ltr(c.code)}</span> · <span class="meta-item">${nTopics(c.topics.length)}</span> · <span class="meta-item">${nQuestions(c.questions.length)}</span></span>
+            <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span>${best ? `<span class="course-progress" style="--p:${(Math.min(best, GOAL) / GOAL).toFixed(2)}" aria-hidden="true"><i></i></span>` : ""}</span></span>
           <span class="row-trail">${Icons.chevron()}</span>
         </button>`;
       }).join("");
@@ -445,6 +445,20 @@
       }
       foot.classList.add("show");
       $("[data-next]", el).focus({ preventScroll: true });
+      requestAnimationFrame(revealExplain);
+    }
+
+    /** The "next" bar floats over the bottom of the card: make room for it and scroll the explanation clear of it. */
+    function revealExplain() {
+      const ex = $(".explain", card);
+      if (!ex || !alive) return;
+      const footH = foot.offsetHeight;
+      body.style.paddingBottom = `${footH + 16}px`;
+      const b = body.getBoundingClientRect(), r = ex.getBoundingClientRect();
+      const limit = b.bottom - footH - 12;
+      // scroll just enough to show the explanation's end, but never push its heading off the top
+      const by = Math.min(r.bottom - limit, r.top - b.top - 8);
+      if (by > 0) body.scrollBy({ top: by, behavior: reduced() ? "auto" : "smooth" });
     }
 
     /** A star burst from the answer button and a "+1" by the streak ring. */
@@ -523,7 +537,7 @@
         <p>${esc(course.name)}</p>
         <div class="stats">
           <div class="stat"><b>${summits}</b><span>${summits === 1 ? "פסגה ראשונה" : "פסגות בקורס"}</span></div>
-          <div class="stat"><b>${st.best}</b><span>שיא רצף</span></div>
+          <div class="stat key"><b>${st.best}</b><span>שיא רצף</span></div>
           <div class="stat"><b>${pool.length}</b><span>שאלות במאגר</span></div>
         </div>
         <div class="actions"><button class="btn-primary" data-again>עוד טיפוס</button><button class="btn-secondary" data-menu>חזרה לבחירת שאלות</button></div>

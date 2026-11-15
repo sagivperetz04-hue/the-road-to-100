@@ -76,8 +76,12 @@
 
   /** A crescent moon with a soft glow. */
   function moon(r) {
+    // crescent = outer circle (radius r, centre 0) minus an inner circle (radius ri, centre a,0); x,y = where they cross
+    const a = r * .5, ri = r * .85;
+    const x = (r * r - ri * ri + a * a) / (2 * a), y = Math.sqrt(r * r - x * x);
+    const f = (v) => v.toFixed(2);
     return `<g class="moon"><circle r="${r * 2.6}" fill="url(#moonGlow)"/>
-      <circle r="${r}" fill="#FFF3C4" mask="url(#moonMask)"/>
+      <path d="M${f(x)} ${f(-y)} A${f(r)} ${f(r)} 0 1 0 ${f(x)} ${f(y)} A${f(ri)} ${f(ri)} 0 1 1 ${f(x)} ${f(-y)} Z" fill="#FFF3C4"/>
       <circle cx="${-r * .45}" cy="${-r * .1}" r="${r * .12}" fill="#F1DE9A"/><circle cx="${-r * .2}" cy="${r * .45}" r="${r * .08}" fill="#F1DE9A"/></g>`;
   }
 
@@ -104,13 +108,11 @@
 
   /** Gradients the pieces above refer to. Put once inside an <svg>'s <defs>. */
   const DEFS = `<radialGradient id="heroGrad" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF9BD2"/><stop offset=".55" stop-color="#E05CC8"/><stop offset="1" stop-color="#9B3FC4"/></radialGradient>
-    <radialGradient id="sunGlow"><stop offset="0" stop-color="#FFF4B8"/><stop offset=".5" stop-color="#FFE066" stop-opacity=".6"/><stop offset="1" stop-color="#FFE066" stop-opacity="0"/></radialGradient>
-    <mask id="moonMask" maskContentUnits="objectBoundingBox"><rect width="1" height="1" fill="#fff"/><circle cx=".78" cy=".36" r=".42" fill="#000"/></mask>
-    <radialGradient id="moonGlow"><stop offset="0" stop-color="#FFF3C4" stop-opacity=".55"/><stop offset=".45" stop-color="#C9C6FF" stop-opacity=".18"/><stop offset="1" stop-color="#C9C6FF" stop-opacity="0"/></radialGradient>`;
+    <radialGradient id="sunGlow"><stop offset="0" stop-color="#FFF4B8"/><stop offset=".5" stop-color="#FFE066" stop-opacity=".6"/><stop offset="1" stop-color="#FFE066" stop-opacity="0"/></radialGradient>    <radialGradient id="moonGlow"><stop offset="0" stop-color="#FFF3C4" stop-opacity=".55"/><stop offset=".45" stop-color="#C9C6FF" stop-opacity=".18"/><stop offset="1" stop-color="#C9C6FF" stop-opacity="0"/></radialGradient>`;
 
   /** Theme palettes shared by the scene, the banner and the summit. */
   const PALETTES = {
-    light: { sky: ["#6EC1FF", "#BFE3FF", "#E9F5FF"], far: ["#A9C8EC", "#8FB3DE"], grass: ["#8ED96B", "#5DB54A"], grassTop: "#B5EB95",
+    light: { sky: ["#6EC1FF", "#BFE3FF", "#E9F5FF"], far: ["#A9C8EC", "#8FB3DE"], grass: ["#A6DA8A", "#78BD62"], grassTop: "#C8EDAE",
       step: ["#F6E7C8", "#DCC08E"], stepTop: "#FFF6E3", stepEdge: "rgba(150,110,60,.32)", stepText: "rgba(120,85,40,.8)",
       bush: ["#6CC456", "#7FD266"], cloud: "#FFFFFF", cloudOpacity: .92 },
     dark: { sky: ["#070B2E", "#1A2266", "#3A3C8C"], far: ["#2A3170", "#1E2457"], grass: ["#2C7A58", "#1A503B"], grassTop: "#45A078",
