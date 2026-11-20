@@ -67,7 +67,8 @@ async def main(adb, shots):
     async with async_playwright() as p:
         browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{PORT}")
         page = next(pg for c in browser.contexts for pg in c.pages if "appassets" in pg.url)
-        await page.wait_for_selector(".course-row", timeout=20000)
+        await page.wait_for_selector(".mode-card, .course-row", timeout=20000)
+        await e2e.enter(page)
         # correct answers, read from the app's own bundled data
         answers = await page.evaluate("""async () => {
           const out = {}, man = await (await fetch('data/courses.json')).json();
@@ -82,6 +83,7 @@ async def main(adb, shots):
         ua = await page.evaluate("navigator.userAgent")
         e2e.check("Android" in ua and "wv" in ua, f"running in the device's Android WebView ({ua.split('Chrome/')[-1].split(' ')[0]})")
         best_before = await page.locator(".best-pill").all_inner_texts()
+        await page.evaluate("Store.sound = true; Store.music = true; Sound.refresh()")   # earlier runs may have left them off
         # background songs: when one ends the next starts (played fast so it ends quickly)
         await page.wait_for_function("Sound.musicState().playing", timeout=15000)
         first = (await page.evaluate("Sound.musicState()"))["file"]
@@ -120,10 +122,29 @@ async def main(adb, shots):
         e2e.check_feet(await e2e.ground_report(page), 0, "device: after a fall")
         screencap("5-after-fall")
         await s.next()
-        await s.climb_to_summit("device")
+        # the last stair: hell mode, the boosted final track (even with sound off) and the vibrator
+        await page.evaluate("Store.sound = false")
+        for _ in range(e2e.GOAL - 1):
+            await s.answer(True); await s.next()
+        await page.wait_for_selector(".game.rage .rage-fx", timeout=4000)
+        e2e.check(True, "device: stair 19 turns on hell mode")
+        try:
+            await page.wait_for_function("(() => { const f = Sound.finalState(); return f.on && f.playing; })()", timeout=8000)
+            e2e.check(True, "device: the final track plays at stair 19 with sound off")
+        except Exception:
+            e2e.check(False, f"device: the final track plays at stair 19 with sound off ({await page.evaluate('Sound.finalState()')})")
+        f = await page.evaluate("Sound.finalState()")
+        e2e.check(f["boosted"] and abs(f["gain"] - 3) < 1e-6 and f["file"] == "music/final-step.mp3", f"device: final track boosted to 300% through Web Audio ({f})")
+        vib = run(adb, "shell", "dumpsys", "vibrator_manager")
+        e2e.check(APP_ID in vib, "device: the app drives the vibrator on stair 19")
+        await page.wait_for_timeout(500); screencap("6-hell-mode")
+        await page.evaluate("Store.sound = true")
+        await s.answer(True)
+        await page.wait_for_selector(".summit h2", timeout=8000)
+        e2e.check(not await page.locator(".rage-fx").count() and not (await page.evaluate("Sound.finalState()"))["on"], "device: the summit ends hell mode")
         await page.wait_for_timeout(1500)
         e2e.check_feet(await e2e.ground_report(page), e2e.GOAL, "device: summit")
-        screencap("6-summit")
+        screencap("7-summit")
         m = await page.evaluate("Sound.musicState()")
         e2e.check(m["scene"] == "summit", f"device: music scene follows the summit ({m})")
         e2e.check(m["played"] == "summit" or (m["file"] == "music/summit-6am.mp3" and m["playing"]), f"device: the summit sound plays ({m})")
@@ -133,18 +154,18 @@ async def main(adb, shots):
         await page.evaluate("appBack()"); await s.wait_screen("courses")
         best_after = await page.locator(".best-pill").all_inner_texts()
         e2e.check(any("20" in b for b in best_after), f"device: best streak saved ({best_before} -> {best_after})")
-        screencap("7-courses-after")
+        screencap("8-courses-after")
         # every theme on the real device: menu + game screenshots, ground contact
         before = await page.evaluate("Theme.setting")
         for theme in ("light", "dark", "pink"):
             await page.evaluate(f"Theme.set('{theme}')")
             e2e.check(await page.get_attribute("html", "data-theme") == theme, f"device: theme {theme} applied")
-            await page.wait_for_timeout(500); screencap(f"8-{theme}-courses")
+            await page.wait_for_timeout(500); screencap(f"9-{theme}-courses")
             await s.open_course(cid); await page.click("[data-go]"); await s.wait_screen("source")
             await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
             await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])"); await page.wait_for_timeout(700)
             e2e.check_feet(await e2e.ground_report(page), 0, f"device {theme}: game start")
-            await s.answer(True); await page.wait_for_timeout(300); screencap(f"9-{theme}-game")
+            await s.answer(True); await page.wait_for_timeout(300); screencap(f"10-{theme}-game")
             await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert")
             await page.click("text=צאי"); await s.wait_screen("source")
             await page.evaluate("appBack()"); await s.wait_screen("topics")

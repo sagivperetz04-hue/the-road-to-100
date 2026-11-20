@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ system splash: the app icon on the loading screen's background, so the hand-off is seamless -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:colorAccent">#007AFF</item>
+        <item name="android:colorPrimary">#EEF3FF</item>
+        <item name="android:colorPrimaryDark">#EEF3FF</item>
+        <item name="android:windowSplashScreenBackground">#0E1130</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_icon_bg</item>
+    </style>
+    <color name="splash_icon_bg">#2A2F6A</color>
+</resources>

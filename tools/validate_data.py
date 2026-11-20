@@ -168,7 +168,8 @@ BIG_AUDIO = 4 * 1024 * 1024
 
 def validate_audio(audio_dir):
     """Check audio/manifest.json: a list of clips, or
-    {"clips": [...], "music": {"menu"|"game"|"summit": [...]}, "sfx": {"correct"|"wrong"|"fall"|"tap": {...}}}."""
+    {"clips": [...], "music": {"menu"|"game"|"summit": [...]}, "sfx": {"correct"|"wrong"|"fall"|"tap": {...}},
+     "final": {...}}  (final = the track for the last stair, played even when muted, "gain" 1..4)."""
     errors, warnings = [], []
     path = os.path.join(audio_dir, "manifest.json")
     if not os.path.exists(path):
@@ -179,9 +180,9 @@ def validate_audio(audio_dir):
     if isinstance(man, list):
         clips, music = man, {}
     elif isinstance(man, dict):
-        unknown = set(man) - {"clips", "music", "sfx"}
+        unknown = set(man) - {"clips", "music", "sfx", "final"}
         if unknown:
-            errors.append(f"audio/manifest.json: unknown keys {sorted(unknown)} (use \"clips\", \"music\" and \"sfx\")")
+            errors.append(f"audio/manifest.json: unknown keys {sorted(unknown)} (use \"clips\", \"music\", \"sfx\" and \"final\")")
         clips, music, sfx = man.get("clips", []), man.get("music", {}), man.get("sfx", {})
         if not isinstance(sfx, dict):
             errors.append('audio/manifest.json: "sfx" must be an object of kind -> {"file": ...}')
@@ -208,6 +209,11 @@ def validate_audio(audio_dir):
         entries += [(f"music.{sc}", i, t) for i, t in enumerate(tracks)]
     if isinstance(man, dict):
         entries += [(f"sfx.{k}", 0, v) for k, v in (man.get("sfx") or {}).items() if isinstance(man.get("sfx"), dict)]
+        if "final" in man:
+            entries.append(("final", 0, man["final"]))
+            g = man["final"].get("gain") if isinstance(man["final"], dict) else None
+            if g is not None and not (isinstance(g, (int, float)) and 1 <= g <= 4):
+                errors.append("audio/manifest.json final: gain must be between 1 and 4")
     for where, i, e in entries:
         tag = f"audio/manifest.json {where}[{i}]"
         if not isinstance(e, dict) or not isinstance(e.get("file"), str) or not e["file"].strip():

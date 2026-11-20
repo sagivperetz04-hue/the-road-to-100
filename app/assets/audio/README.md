@@ -8,6 +8,7 @@ Everything in this folder ships inside the APK. Use only audio you have the righ
 | --- | --- | --- |
 | **Clips** (5 seconds) | every 5 stairs (and at the summit if it has no music), with the "Now Playing" island | nothing |
 | **Sound effects** (`sfx`) | `wrong`, `correct`, `tap`, `fall`; a `wrong` file also replaces the falling sound | the built-in beeps |
+| **Last stair** (`final`) | stair 19 (one before the summit), with the red "hell mode" and vibration; plays **even when sound is off**, boosted by `gain` (3 = 300%), and holds the background song until the stair is decided | stair 19 looks the same as the others |
 | **Background music** | looping, per screen: `menu` (course / topic / source screens), `game` (the climb), `summit` (the summit screen) | silence |
 
 Background music fades between screens, drops to a quarter of its volume while a clip plays, pauses when the
@@ -63,3 +64,7 @@ The full format:
 
 No code changes are needed. In code, `Sound.music("menu" | "game" | "summit" | null)` picks the playlist,
 `Sound.pause()` / `Sound.resume()` follow the app's lifecycle, and `Sound.musicState()` reports what is playing.
+
+`"final": { "file": "music/final-step.mp3", "title": "...", "artist": "...", "gain": 3 }` – `gain` is 1 to 4. It goes
+through Web Audio, so values above 1 really are louder than the file (and may distort). `Sound.final(true|false)`
+switches it, `Sound.finalState()` reports it.

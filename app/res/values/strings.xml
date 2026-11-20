@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">The Road To 100</string>
+    <string name="reminder_channel">תזכורות יומיות</string>
+    <string name="reminder_morning">בוקר טוב, תתחילי ללמוד</string>
+    <string name="reminder_evening">ערב טוב, תעשי משחק לפני השינה</string>
 </resources>

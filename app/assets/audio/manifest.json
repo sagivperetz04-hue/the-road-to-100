@@ -2,18 +2,73 @@
   "clips": [],
   "music": {
     "menu": [
-      { "file": "music/papa-dont-preach.mp3", "title": "Papa Don't Preach", "artist": "Madonna", "volume": 0.3 },
-      { "file": "music/bass-persuades.mp3", "title": "Bass Persuades", "artist": "Miley", "volume": 0.3 }
+      {
+        "file": "music/papa-dont-preach.mp3",
+        "title": "Papa Don't Preach",
+        "artist": "Madonna",
+        "volume": 0.3,
+        "color": "#E0457B"
+      },
+      {
+        "file": "music/bass-persuades.mp3",
+        "title": "Bass Persuades",
+        "artist": "Miley",
+        "volume": 0.3,
+        "color": "#8E5CF7"
+      },
+      {
+        "file": "music/cruel-angels-thesis.mp3",
+        "title": "A Cruel Angel's Thesis",
+        "artist": "Evangelion",
+        "volume": 0.3,
+        "color": "#7B3FE4"
+      }
     ],
     "game": [
-      { "file": "music/papa-dont-preach.mp3", "title": "Papa Don't Preach", "artist": "Madonna", "volume": 0.3 },
-      { "file": "music/bass-persuades.mp3", "title": "Bass Persuades", "artist": "Miley", "volume": 0.3 }
+      {
+        "file": "music/papa-dont-preach.mp3",
+        "title": "Papa Don't Preach",
+        "artist": "Madonna",
+        "volume": 0.3,
+        "color": "#E0457B"
+      },
+      {
+        "file": "music/bass-persuades.mp3",
+        "title": "Bass Persuades",
+        "artist": "Miley",
+        "volume": 0.3,
+        "color": "#8E5CF7"
+      },
+      {
+        "file": "music/cruel-angels-thesis.mp3",
+        "title": "A Cruel Angel's Thesis",
+        "artist": "Evangelion",
+        "volume": 0.3,
+        "color": "#7B3FE4"
+      }
     ],
     "summit": [
-      { "file": "music/summit-6am.mp3", "title": "6 AM", "artist": "FNAF", "volume": 0.9, "loop": false }
+      {
+        "file": "music/summit-6am.mp3",
+        "title": "6 AM",
+        "artist": "FNAF",
+        "volume": 0.9,
+        "loop": false,
+        "color": "#F5A623"
+      }
     ]
   },
   "sfx": {
-    "wrong": { "file": "sfx/fahh.mp3", "volume": 1 }
+    "wrong": {
+      "file": "sfx/fahh.mp3",
+      "volume": 1
+    }
+  },
+  "final": {
+    "file": "music/final-step.mp3",
+    "title": "The Only Thing They Fear Is You",
+    "artist": "BFG Division Mashup",
+    "gain": 3,
+    "color": "#D7261E"
   }
 }

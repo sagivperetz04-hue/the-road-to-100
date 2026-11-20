@@ -41,7 +41,13 @@
     get theme() { return read().settings.theme || "auto"; },
     set theme(v) { read().settings.theme = String(v); write(); },
     get music() { return !!read().settings.music; },
+    /** "cool" (למגניבים בלבד: music, hell mode) or "boring" (משעמם: neither). Picked on the first screen. */
+    get mode() { return read().settings.mode === "boring" ? "boring" : "cool"; },
+    set mode(v) { read().settings.mode = v === "boring" ? "boring" : "cool"; write(); },
     set music(v) { read().settings.music = !!v; write(); },
+    /** The music tab's choices: { playlist: [files] | null, shuffle, summit: file | null, final: file | null }. */
+    get musicPrefs() { const m = read().settings.musicPrefs; return m && typeof m === "object" ? m : null; },
+    set musicPrefs(v) { read().settings.musicPrefs = v && typeof v === "object" ? JSON.parse(JSON.stringify(v)) : null; write(); },
 
     lastTopics(cid) { return course(cid).lastTopics; },
     setLastTopics(cid, topics, source) {

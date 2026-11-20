@@ -25,6 +25,15 @@
     shuffle: () => s("0 0 28 28", '<path d="M4 8h4.5c4.5 0 6.5 12 11 12H24M4 20h4.5c2 0 3.4-2.3 4.6-5M15 9.8C16.2 8.9 17.6 8 19.5 8H24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M21 4.5L24.5 8 21 11.5M21 16.5l3.5 3.5-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'),
     note: () => s("0 0 20 20", '<path d="M8 15.5V4.5l9-2v10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="5.5" cy="15.5" r="2.5" fill="currentColor"/><circle cx="14.5" cy="13" r="2.5" fill="currentColor"/>'),
     info: () => s("0 0 24 24", '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.3" r="1.3" fill="currentColor"/>'),
+    // player (the music tab); play/next/prev keep their usual direction even in RTL
+    play: () => s("0 0 24 24", '<path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z" fill="currentColor"/>'),
+    pause: () => s("0 0 24 24", '<rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/>'),
+    next: () => s("0 0 24 24", '<path d="M5 5.6v12.8a.7.7 0 0 0 1.1.6l9.4-6.4a.7.7 0 0 0 0-1.2L6.1 5A.7.7 0 0 0 5 5.6z" fill="currentColor"/><rect x="16.6" y="5" width="2.6" height="14" rx="1" fill="currentColor"/>'),
+    prev: () => s("0 0 24 24", '<path d="M19 5.6v12.8a.7.7 0 0 1-1.1.6l-9.4-6.4a.7.7 0 0 1 0-1.2L17.9 5a.7.7 0 0 1 1.1.6z" fill="currentColor"/><rect x="4.8" y="5" width="2.6" height="14" rx="1" fill="currentColor"/>'),
+    added: () => s("0 0 24 24", '<circle cx="12" cy="12" r="10.5" fill="currentColor"/><path d="M7.2 12.3l3.2 3.2 6.4-6.6" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>'),
+    add: () => s("0 0 24 24", '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
+    home: () => s("0 0 24 24", '<path d="M3.5 10.8L12 3.5l8.5 7.3V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z" fill="currentColor"/>'),
+    library: () => s("0 0 24 24", '<rect x="3.5" y="3.5" width="3" height="17" rx="1" fill="currentColor"/><rect x="9" y="3.5" width="3" height="17" rx="1" fill="currentColor"/><path d="M14.6 4.6l2.9-.8 4 15.8-2.9.8z" fill="currentColor"/>'),
     crown: () => s("0 0 92 70", '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD84D"/><stop offset="1" stop-color="#FF9F0A"/></linearGradient></defs><path d="M8 58L4 18l22 18L46 6l20 30 22-18-4 40z" fill="url(#cg)" stroke="#E07C00" stroke-width="2.5" stroke-linejoin="round"/><rect x="8" y="56" width="76" height="10" rx="3" fill="#FF9F0A" stroke="#E07C00" stroke-width="2.5"/><circle cx="46" cy="40" r="6" fill="#FF2D55"/><circle cx="24" cy="46" r="4.5" fill="#5856D6"/><circle cx="68" cy="46" r="4.5" fill="#34C759"/>', 'class="crown"'),
   };
 })();

@@ -140,12 +140,36 @@ To add a theme: add a `[data-theme="name"]` token block in `app.css`, a palette 
 `BARS` in `theme.js`, and an entry in `THEME_INFO` in `app.js`. The e2e test screenshots every screen in every
 theme (`build/screenshots/theme-*`).
 
+## Modes
+
+The app opens on a mode screen (every launch; the last choice is marked). It is saved as `settings.mode`:
+- **משעמם** (`boring`): no music at all, no hell mode on stair 19, no music tab. Sound effects stay.
+- **למגניבים בלבד** (`cool`): everything below.
+
+The "מצב" pill on the courses screen goes back to the mode screen.
+
 ## Music
 
-Background music (per screen: menu / game / summit), 5-second milestone clips and sound effects are listed in
-`app/assets/audio/manifest.json`; see `app/assets/audio/README.md`. Now: two songs as background music on the menus
-and in the game (a song keeps playing between them), the "6 AM" sound on the summit, and "Fahh" on a wrong answer.
-Adding or swapping files needs no code changes; `validate_data.py` checks the manifest.
+Background music (per screen: menu / game / summit), the last-stair track, 5-second milestone clips and sound
+effects are listed in `app/assets/audio/manifest.json`; see `app/assets/audio/README.md`. Now: three songs as
+background music on the menus and in the game (a song keeps playing between them), "6 AM" on the summit, the BFG
+Division mashup on stair 19 (hell mode, 300%, even when muted) and "Fahh" on a wrong answer. Adding or swapping
+files needs no code changes; `validate_data.py` checks the manifest.
+
+Only one song plays at a time: each audio element fades on its own and every older song is retired when a new one
+starts (`Sound.debugPlaying()` lists what is playing; the tests check it).
+
+**Music tab** (second tab on the home screen, Spotify style): the current song with play/pause, next, previous,
+shuffle and a seek bar; the playlist (tap a song to play it, the tick adds or removes it from the menu/game
+rotation); and pickers for the summit song and the stair-19 song. A mini player sits above the tabs on the courses
+tab. The choices are saved as `settings.musicPrefs` (`null` = the manifest's choice).
+
+## Daily reminders
+
+`Reminders.java` shows a notification at 08:00 ("בוקר טוב, תתחילי ללמוד") and 20:00 ("ערב טוב,
+תעשי משחק לפני השינה"); the texts are in `res/values/strings.xml`. Each alarm books the next day; boot, app updates
+and clock changes book both again. Android 13+ asks once for permission to show notifications. On debug builds,
+`AndroidBridge.testReminder(0|1)` shows one at once.
 
 ## Test on a phone or emulator
 

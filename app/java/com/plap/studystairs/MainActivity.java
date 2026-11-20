@@ -1,12 +1,17 @@
 package com.plap.studystairs;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.Window;
@@ -34,11 +39,20 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(0xEE, 0xF3, 0xFF);
 
     private WebView web;
+    /** A repeating vibration the page asked for (the last stair); stopped in the background, restarted on return. */
+    private long[] rumble;
+    private int rumbleRepeat = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         styleSystemBars();
+
+        // daily reminders at 08:00 and 20:00; Android 13+ asks once for permission to show notifications
+        Reminders.scheduleAll(this);
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
 
         // Debug builds only (tools/build.sh --debuggable): lets Chrome DevTools / tests drive the WebView over adb.
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
@@ -97,8 +111,37 @@ public class MainActivity extends Activity {
         });
     }
 
+    @SuppressWarnings("deprecation")
+    private Vibrator vibrator() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            VibratorManager vm = (VibratorManager) getSystemService(VIBRATOR_MANAGER_SERVICE);
+            return vm != null ? vm.getDefaultVibrator() : null;
+        }
+        return (Vibrator) getSystemService(VIBRATOR_SERVICE);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void startVibration(long[] timings, int repeat) {
+        Vibrator v = vibrator();
+        if (v == null || !v.hasVibrator()) return;
+        v.cancel();
+        if (Build.VERSION.SDK_INT >= 26) {
+            int[] amps = new int[timings.length];
+            for (int i = 0; i < amps.length; i++) amps[i] = i % 2 == 0 ? 0 : 255;   // even = pause, odd = full strength
+            v.vibrate(VibrationEffect.createWaveform(timings, amps, repeat));
+        } else {
+            v.vibrate(timings, repeat);
+        }
+    }
+
+    private void stopVibration() {
+        Vibrator v = vibrator();
+        if (v != null) v.cancel();
+    }
+
     @Override
     protected void onPause() {
+        stopVibration();
         if (web != null) {
             web.evaluateJavascript("window.Sound && (window.Sound.pause ? window.Sound.pause() : window.Sound.stop())", null);
             web.onPause();
@@ -113,6 +156,7 @@ public class MainActivity extends Activity {
             web.onResume();
             web.evaluateJavascript("window.Sound && window.Sound.resume && window.Sound.resume()", null);
         }
+        if (rumble != null) startVibration(rumble, rumbleRepeat);
     }
 
     @Override
@@ -159,6 +203,36 @@ public class MainActivity extends Activity {
                 else c = HapticFeedbackConstants.KEYBOARD_TAP;
                 web.performHapticFeedback(c);
             });
+        }
+
+        /** Pattern "off,on,off,on,..." in ms; repeat = index to loop from (-1 = once) until stopVibrate(). */
+        @JavascriptInterface
+        public void vibrate(final String pattern, final int repeat) {
+            final long[] t;
+            try {
+                String[] parts = pattern.split(",");
+                if (parts.length < 2 || parts.length > 64) return;
+                t = new long[parts.length];
+                for (int i = 0; i < parts.length; i++) t[i] = Math.max(0, Math.min(5000, Long.parseLong(parts[i].trim())));
+            } catch (NumberFormatException e) { return; }
+            final int rep = repeat >= 0 && repeat < t.length ? repeat : -1;
+            runOnUiThread(() -> {
+                rumble = rep >= 0 ? t : null;
+                rumbleRepeat = rep;
+                startVibration(t, rep);
+            });
+        }
+
+        @JavascriptInterface
+        public void stopVibrate() {
+            runOnUiThread(() -> { rumble = null; rumbleRepeat = -1; stopVibration(); });
+        }
+
+        /** Debug builds only: show reminder 0 (morning) or 1 (evening) now, to test it. */
+        @JavascriptInterface
+        public void testReminder(final int which) {
+            if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0 || which < 0 || which > 1) return;
+            Reminders.show(MainActivity.this, which);
         }
 
         @JavascriptInterface

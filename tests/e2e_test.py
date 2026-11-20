@@ -56,11 +56,12 @@ def make_music_site(site):
     msite = tempfile.mkdtemp(prefix="stairs-music-")
     shutil.copytree(site, msite, dirs_exist_ok=True)
     adir = os.path.join(msite, "audio")
-    for name, f in (("menu.wav", 330), ("game1.wav", 440), ("game2.wav", 494), ("summit.wav", 660), ("clip.wav", 880)):
+    for name, f in (("menu.wav", 330), ("game1.wav", 440), ("game2.wav", 494), ("summit.wav", 660), ("clip.wav", 880), ("final.wav", 110)):
         tone_wav(os.path.join(adir, name), f)
     json.dump({"clips": [{"file": "clip.wav", "title": "Test clip", "artist": "e2e"}],
                "music": {"menu": [{"file": "menu.wav"}], "game": [{"file": "game1.wav"}, {"file": "game2.wav", "volume": 0.5}],
-                         "summit": [{"file": "summit.wav"}]}},
+                         "summit": [{"file": "summit.wav"}]},
+               "final": {"file": "final.wav", "title": "Final", "gain": 3}},
               open(os.path.join(adir, "manifest.json"), "w"))
     return msite
 
@@ -138,6 +139,14 @@ class Session:
         return seen
 
 
+async def enter(page, mode="cool"):
+    """The app opens on the mode screen: pick a mode (default: the full game) and wait for the courses."""
+    await page.wait_for_selector(".mode-card, .course-row")
+    if await page.locator(".mode-card").count():
+        await page.click(f'.mode-card[data-mode="{mode}"]')
+    await page.wait_for_selector(".course-row")
+
+
 async def ground_report(page):
     """Scene geometry in SVG units: how far the creature's feet are above the grass, and how far the step blocks
     end from the grass line. Feet on the ground at step N -> feet_gap == N * 24 (one stair is 24 units)."""
@@ -182,7 +191,7 @@ async def overflow_report(page):
       for (const root of roots) {
         for (const sc of root.querySelectorAll('.scroller, .game-body')) if (sc.scrollWidth > sc.clientWidth + 1) issues.push('horizontal scroll in ' + sc.className);
         for (const el of root.querySelectorAll('*')) {
-          if (el.closest('svg') || el.closest('.island')) continue;
+          if (el.closest('svg') || el.closest('.island') || el.closest('.pick-row')) continue;
           const r = el.getBoundingClientRect();
           if (!r.width || !r.height) continue;
           const st = getComputedStyle(el);
@@ -209,14 +218,14 @@ async def run(chrome, shots):
         page = await ctx.new_page()
         s = Session(page, answers)
         await page.goto(url)
-        await page.wait_for_selector(".course-row")
+        await enter(page)
         names = await page.locator(".course-row .row-title").all_inner_texts()
         check(len(names) == len(manifest), f"course list shows {len(names)} courses (manifest has {len(manifest)}), incl. the fixture added by one manifest line")
         check(await page.evaluate("appBack()") == "exit", "hardware Back on the first screen exits the app")
         # background music from audio/manifest.json starts on the first screen
         await page.wait_for_function("(() => { const m = Sound.musicState(); return m.scene === 'menu' && m.playing && m.time > 0.2; })()", timeout=8000)
         bg = await page.evaluate("Sound.musicState()")
-        songs = ("music/papa-dont-preach.mp3", "music/bass-persuades.mp3")
+        songs = ("music/papa-dont-preach.mp3", "music/bass-persuades.mp3", "music/cruel-angels-thesis.mp3")
         check(bg["file"] in songs, f"background music plays on the menu ({bg['file']})")
         # shuffle: when a song ends the next one starts by itself (played at 16x so it ends quickly)
         await page.evaluate("Sound.debugSpeed(16)")
@@ -354,7 +363,7 @@ async def run(chrome, shots):
         best = await page.locator(".best-pill").all_inner_texts()
         check(all("20" in b for b in best), f"course list shows the best streaks: {best}")
         # progress survives a reload
-        await page.reload(); await page.wait_for_selector(".course-row")
+        await page.reload(); await enter(page)
         best2 = await page.locator(".best-pill").all_inner_texts()
         check(best2 == best, "progress survives a reload (localStorage)")
         check(not s.problems, "no console errors / warnings / failed requests" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
@@ -366,7 +375,7 @@ async def run(chrome, shots):
             ctx = await browser.new_context(viewport={"width": w, "height": hgt}, device_scale_factor=2, has_touch=True, reduced_motion="reduce")
             page = await ctx.new_page()
             s = Session(page, answers)
-            await page.goto(url); await page.wait_for_selector(".course-row")
+            await page.goto(url); await enter(page)
             async def shot(name):
                 await page.wait_for_timeout(250)
                 path = os.path.join(shots, f"{w}x{hgt}-{name}.png")
@@ -406,14 +415,14 @@ async def run(chrome, shots):
         for scheme, want in (("dark", "dark"), ("light", "light")):
             ctx = await browser.new_context(viewport={"width": 393, "height": 851}, color_scheme=scheme)
             page = await ctx.new_page()
-            await page.goto(url); await page.wait_for_selector(".course-row")
+            await page.goto(url); await enter(page)
             check(await page.get_attribute("html", "data-theme") == want, f"auto theme follows the system ({scheme} -> {want})")
             await ctx.close()
         for w, hgt in ((393, 851), (360, 640)):
             ctx = await browser.new_context(viewport={"width": w, "height": hgt}, device_scale_factor=2, has_touch=True, reduced_motion="reduce")
             page = await ctx.new_page()
             s = Session(page, answers)
-            await page.goto(url); await page.wait_for_selector(".course-row")
+            await page.goto(url); await enter(page)
             for theme in ("light", "dark", "pink"):
                 tag = f"{w}x{hgt} {theme}"
                 await page.click('[data-act="theme"]'); await page.wait_for_selector(".sheet .theme-opt")
@@ -472,7 +481,7 @@ async def run(chrome, shots):
                 check(True, label)
             except Exception:
                 check(False, f"{label} (state {await state()})")
-        await page.goto(murl); await page.wait_for_selector(".course-row")
+        await page.goto(murl); await enter(page)
         check(await page.locator('[data-act="music"]').count() == 1, "music toggle shown when the manifest has tracks")
         await page.click('.course-row >> nth=0')       # a user gesture, like on a phone
         await s.wait_screen("topics")
@@ -492,7 +501,47 @@ async def run(chrome, shots):
         await page.click("text=צאי"); await s.wait_screen("source")
         await wait_music("m.scene === 'menu' && m.playing", "leaving the game goes back to menu music")
         await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        isl = await page.evaluate("(() => { const s = getComputedStyle(document.querySelector('.island')); return +s.opacity; })()")
+        check(isl == 0, f"no resting notch: the island is hidden until a song is announced (opacity {isl})")
+
+        # the last stair: streak 19 turns the game into hell mode with the boosted "final" track, even with sound off
+        async def final_state():
+            return await page.evaluate("Sound.finalState()")
+        await page.evaluate("Store.sound = false")
+        for i in range(GOAL - 1):
+            await s.answer(True)
+            if i < GOAL - 2:
+                if i == GOAL - 3:
+                    check(not await page.locator(".game.rage").count(), "no hell mode before the 19th stair")
+                await s.next()
+        await page.wait_for_selector(".game.rage .rage-fx", timeout=3000)
+        check(True, "stair 19 turns on hell mode (red, flames)")
+        check(await page.locator(".rage-fx .flame").count() >= 12 and await page.locator(".rage-fx .pike").count() == 2, "hell mode draws flames and skulls")
+        check(await page.locator(".game .slam").count() == 1, "hell mode slams its 'שלב אחרון' banner")
+        try:
+            await page.wait_for_function("(() => { const f = Sound.finalState(); return f.on && f.playing; })()", timeout=5000)
+            check(True, "the final track plays at stair 19 even though sound is off")
+        except Exception:
+            check(False, f"the final track plays at stair 19 even though sound is off ({await final_state()})")
+        await page.wait_for_timeout(450); await page.screenshot(path=os.path.join(shots, "music-hell-mode-slam.png"))
+        await page.wait_for_timeout(2400); await page.screenshot(path=os.path.join(shots, "music-hell-mode.png"))
+        f = await final_state()
+        check(f["boosted"] and abs(f["gain"] - 3) < 1e-6, f"the final track is boosted to 300% ({f})")
+        m = await state()
+        check(not m["playing"], f"the background song is held under the final track ({m})")
+        await page.evaluate("Sound.pause()")
+        check(not (await final_state())["playing"], "Sound.pause() (app in background) pauses the final track")
+        await page.evaluate("Sound.resume()")
+        await page.wait_for_function("Sound.finalState().playing", timeout=3000)
+        check(True, "Sound.resume() picks the final track up again")
+        await page.evaluate("Store.sound = true")
+        await s.next(); await s.answer(False)
+        await page.wait_for_function("!document.querySelector('.game.rage') && !Sound.finalState().on", timeout=3000)
+        check(not await page.locator(".rage-fx").count(), "a wrong answer on stair 19 ends hell mode")
+        await wait_music("m.scene === 'game' && m.playing", "the background song comes back after hell mode")
+        await s.next()
         await s.climb_to_summit("music")
+        check(not (await final_state())["on"] and not await page.locator(".rage-fx").count(), "reaching the summit ends hell mode")
         await wait_music("m.scene === 'summit' && m.playing && m.file === 'summit.wav'", "summit music plays on the summit screen")
         await page.click("[data-again]")
         await wait_music("m.scene === 'game' && m.playing", "'עוד טיפוס' goes back to game music")
@@ -501,11 +550,64 @@ async def run(chrome, shots):
         await page.click('[data-act="music"]')
         await wait_music("!m.playing", "music toggle off stops the music")
         check(await page.get_attribute('[data-act="music"]', "aria-pressed") == "false", "music toggle shows off")
-        await page.reload(); await page.wait_for_selector(".course-row")
+        await page.reload(); await enter(page)
         check(await page.get_attribute('[data-act="music"]', "aria-pressed") == "false", "music off is remembered")
         await page.click('[data-act="music"]')
         await wait_music("m.playing && m.scene === 'menu'", "music toggle on starts the menu music again")
         await shot_page(page, shots, "music-courses")
+
+        # only one song at a time, through every scene change (the old "mushed" bug: fades left songs playing)
+        playing_music = "Sound.debugPlaying().filter(x => x.kind === 'music' || x.kind === 'final').length"
+        check(await page.evaluate(playing_music) <= 1, "one song at a time on the courses screen")
+
+        # the music tab: mini player, Spotify-style player, playlist and picks
+        await page.wait_for_selector(".mini:not([hidden])", timeout=4000)
+        check(True, "the mini player shows the song on the courses tab")
+        await page.click('[data-tab-btn="music"]'); await page.wait_for_selector(".music-tab .np-title")
+        await shot_page(page, shots, "music-tab")
+        lib_n = await page.evaluate("Sound.library().length")
+        check(await page.locator(".music-tab .trk").count() == lib_n == 5, f"the music tab lists every song ({lib_n})")
+        await page.click(".music-tab [data-p-play]")
+        await wait_music("m.userPaused && !m.playing", "the play button pauses the music")
+        await page.click(".music-tab [data-p-play]")
+        await wait_music("!m.userPaused && m.playing", "and plays it again")
+        await page.evaluate("Sound.setPrefs({ playlist: ['menu.wav', 'game1.wav'] })")
+        before = (await state())["file"]
+        await page.click(".music-tab [data-p-next]")
+        await wait_music(f"m.playing && m.file !== {before!r}", "next skips to another song")
+        await page.wait_for_timeout(800)
+        check(await page.evaluate(playing_music) == 1, f"after next only one song plays ({await page.evaluate('Sound.debugPlaying()')})")
+        await page.click('.music-tab .trk[data-file="summit.wav"] [data-play-file]')
+        await wait_music("m.playing && m.file === 'summit.wav'", "tapping a song plays it now")
+        await page.click('.music-tab .trk[data-file="menu.wav"] [data-toggle-file]')
+        pl = await page.evaluate("Sound.prefs().playlist")
+        check("menu.wav" not in pl, f"the toggle takes a song out of the playlist ({pl})")
+        await page.click('.music-tab [data-pick="final"] .card-pick[data-file="game2.wav"]')
+        check((await page.evaluate("Sound.prefs()"))["final"] == "game2.wav", "the last-stair song can be picked")
+        await page.reload(); await enter(page)
+        pr = await page.evaluate("Sound.prefs()")
+        check("menu.wav" not in pr["playlist"] and pr["final"] == "game2.wav", f"music choices are remembered ({pr})")
+        await page.evaluate("Sound.setPrefs({ playlist: null, final: null, summit: null })")
+        await page.click('[data-tab-btn="music"]'); await page.wait_for_selector(".music-tab .np-title")
+        check(await page.evaluate("appBack()") == "handled" and await page.get_attribute(".home", "data-tab") == "courses", "Back on the music tab goes to the courses tab")
+
+        # the boring mode: no music at all and no hell mode on stair 19
+        await page.click('[data-act="mode"]'); await page.wait_for_selector(".mode-card")
+        await shot_page(page, shots, "mode-screen")
+        await wait_music("!m.playing", "no music on the mode screen")
+        await page.click('.mode-card[data-mode="boring"]'); await page.wait_for_selector(".course-row")
+        check(await page.locator('[data-tab-btn="music"]').is_hidden() and await page.locator('[data-act="music"]').count() == 0, "boring mode hides the music tab and toggle")
+        await page.click('.course-row >> nth=0'); await s.wait_screen("topics")
+        await page.click("[data-go]"); await s.wait_screen("source")
+        await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        for _ in range(GOAL - 1):
+            await s.answer(True); await s.next()
+        await page.wait_for_timeout(600)
+        check(not await page.locator(".rage-fx").count() and not (await page.evaluate("Sound.finalState()"))["on"], "boring mode: no hell mode on stair 19")
+        check(await page.evaluate(playing_music) == 0, "boring mode: no music in the game")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await s.wait_screen("source")
+        await page.evaluate("Store.mode = 'cool'")
         check(not s.problems, "music: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
         await ctx.close()
         mhttpd.shutdown()
