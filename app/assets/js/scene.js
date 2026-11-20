@@ -8,6 +8,16 @@
   const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const stepPos = (i) => ({ x: -i * W, y: -i * H });
+  const DX = 10, DY = 7;                 // the stairs' depth: the top and side planes recede up and to the right
+  const MAT = {
+    light: { mHi: "#E1B7FF", mMid: "#AC60E2", mLow: "#713AA7", sheen: "#FFFFFF", rim: "#E6C6FF", hornHi: "#FFE99A", hornLow: "#DDA536", eye: "#FFFEFA", face: "#30203F", cheek: "#F385CD", contact: "#3B274E",
+      top: "#FFF2D2", frontHi: "#EBD7AE", frontLow: "#DCC18F", side: "#BA9969", outline: "#CBB282", bevel: "#FFF9E9", seam: "#846440" },
+    pink: { mHi: "#FFC0EB", mMid: "#D66AD8", mLow: "#8E3CA9", sheen: "#FFF5FC", rim: "#FFE0A8", hornHi: "#FFF1B3", hornLow: "#EDAF53", eye: "#FFFEFA", face: "#49213E", cheek: "#FF91BF", contact: "#65264F",
+      top: "#FFF6FC", frontHi: "#F5BEDF", frontLow: "#E69BC8", side: "#BC72A5", outline: "#CD8EB7", bevel: "#FFFFFF", seam: "#87476F" },
+    dark: { mHi: "#C6BCFF", mMid: "#9275DE", mLow: "#4F3C8D", sheen: "#E9F3FF", rim: "#AFCBFF", hornHi: "#EEE4BE", hornLow: "#AA956B", eye: "#F3F5FF", face: "#211A38", cheek: "#CA8BDC", contact: "#050611",
+      top: "#A9B3D7", frontHi: "#65729A", frontLow: "#4D587E", side: "#343E62", outline: "#485478", bevel: "#D3DFFF", seam: "#18213D" },
+  };
+  let sceneN = 0;
   const ease = {
     out: (t) => 1 - Math.pow(1 - t, 3),
     inOut: (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
@@ -21,40 +31,37 @@
     return n;
   }
 
-  function monster(parent) {
+  const MS = 0.6;   // monster scale: about 42 units wide and 52 tall on a 46-unit stair
+  function monster(parent, M, id) {
     const g = el("g", { class: "hero" }, parent);
+    const T = `translate(${-60 * MS} ${-118 * MS}) scale(${MS})`;
     // shadow + feet stay planted on the surface; only the body above them bobs and squashes
     const feet = el("g", { class: "hero-feet" }, g);
-    feet.innerHTML = `
-      <ellipse cx="0" cy="-.6" rx="13" ry="2.6" fill="rgba(0,0,0,.16)"/>
-      <ellipse class="foot" cx="-6" cy="-3.4" rx="5" ry="3.4" fill="#7A3FA8"/>
-      <ellipse class="foot" cx="6" cy="-3.4" rx="5" ry="3.4" fill="#7A3FA8"/>`;
+    feet.innerHTML = `<g transform="${T}">
+        <g class="hero-shadow" fill="${M.contact}"><ellipse cx="60" cy="119" rx="30" ry="5" opacity=".10"/><ellipse cx="60" cy="118" rx="19" ry="2.5" opacity=".18"/></g>
+        <ellipse class="foot" cx="46" cy="112" rx="12" ry="6" fill="${M.mLow}"/><ellipse class="foot" cx="74" cy="112" rx="12" ry="6" fill="${M.mLow}"/></g>`;
     const bob = el("g", { class: "hero-bob" }, g);
     const body = el("g", { class: "hero-body" }, bob);
-    body.innerHTML = `
-      <path d="M-9 -29 L-12 -40 L-3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8" stroke-linejoin="round"/>
-      <path d="M9 -29 L12 -40 L3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8" stroke-linejoin="round"/>
-      <ellipse cx="0" cy="-17" rx="15" ry="15.5" fill="url(#heroGrad)"/>
-      <ellipse cx="0" cy="-12" rx="9" ry="8" fill="#FFC8E4" opacity=".55"/>
-      <ellipse cx="-14.5" cy="-14" rx="3.4" ry="5" fill="#C04FC9" transform="rotate(20 -14.5 -14)"/>
-      <ellipse cx="14.5" cy="-14" rx="3.4" ry="5" fill="#C04FC9" transform="rotate(-20 14.5 -14)"/>
-      <g class="face-happy">
-        <ellipse cx="-5.5" cy="-21" rx="4.2" ry="4.8" fill="#fff"/><ellipse cx="5.5" cy="-21" rx="4.2" ry="4.8" fill="#fff"/>
-        <circle cx="-6.6" cy="-21.6" r="2.3" fill="#1c1c1e"/><circle cx="4.4" cy="-21.6" r="2.3" fill="#1c1c1e"/>
-        <circle cx="-7.3" cy="-22.6" r=".8" fill="#fff"/><circle cx="3.7" cy="-22.6" r=".8" fill="#fff"/>
-        <path d="M-4.5 -13.5 Q0 -9.5 4.5 -13.5" fill="none" stroke="#5B1A61" stroke-width="1.6" stroke-linecap="round"/>
-      </g>
-      <g class="face-oops" style="display:none">
-        <ellipse cx="-5.5" cy="-21" rx="4.6" ry="5.2" fill="#fff"/><ellipse cx="5.5" cy="-21" rx="4.6" ry="5.2" fill="#fff"/>
-        <circle cx="-5.5" cy="-21" r="1.6" fill="#1c1c1e"/><circle cx="5.5" cy="-21" r="1.6" fill="#1c1c1e"/>
-        <ellipse cx="0" cy="-11.5" rx="2.6" ry="3.2" fill="#5B1A61"/>
-      </g>
-      <g class="face-party" style="display:none">
-        <path d="M-9 -20 Q-5.5 -25 -2 -20 M2 -20 Q5.5 -25 9 -20" fill="none" stroke="#1c1c1e" stroke-width="1.8" stroke-linecap="round"/>
-        <path d="M-6 -14 Q0 -6.5 6 -14 Z" fill="#5B1A61"/>
-      </g>
-      <circle cx="-10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".55"/><circle cx="10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".55"/>`;
-    return { g, bob, body };
+    body.innerHTML = `<g transform="${T}">
+      <defs>
+        <radialGradient id="${id}b" cx="32%" cy="22%" r="82%"><stop offset="0" stop-color="${M.mHi}"/><stop offset=".52" stop-color="${M.mMid}"/><stop offset="1" stop-color="${M.mLow}"/></radialGradient>
+        <linearGradient id="${id}h" x2=".3" y2="1"><stop stop-color="${M.hornHi}"/><stop offset="1" stop-color="${M.hornLow}"/></linearGradient>
+      </defs>
+      <path d="M38 49 31 14 51 43Z" fill="url(#${id}h)"/><path d="M69 43 89 14 82 49Z" fill="url(#${id}h)"/>
+      <g fill="${M.mMid}"><ellipse cx="25" cy="84" rx="7" ry="11" transform="rotate(12 25 84)"/><ellipse cx="95" cy="84" rx="7" ry="11" transform="rotate(-12 95 84)"/></g>
+      <ellipse cx="60" cy="78" rx="34" ry="37" fill="url(#${id}b)"/>
+      <path d="M35 62C38 48 49 43 61 45" fill="none" stroke="${M.sheen}" stroke-width="3" stroke-linecap="round" opacity=".24"/>
+      <path class="m-rim" d="M87 84C85 98 78 105 68 109" fill="none" stroke="${M.rim}" stroke-width="1.5" stroke-linecap="round" opacity=".18"/>
+      <g class="face-happy"><g class="eyes"><g fill="${M.eye}"><ellipse cx="48" cy="68" rx="10" ry="12"/><ellipse cx="72" cy="68" rx="10" ry="12"/></g>
+          <g fill="${M.face}"><circle cx="50" cy="70" r="4.5"/><circle cx="74" cy="70" r="4.5"/></g>
+          <g fill="#FFFFFF"><circle cx="48.5" cy="68" r="1.5"/><circle cx="72.5" cy="68" r="1.5"/></g></g>
+        <path d="M47 87Q60 92 73 87Q60 108 47 87Z" fill="${M.face}"/></g>
+      <g class="face-oops" style="display:none"><g fill="${M.eye}"><ellipse cx="48" cy="66" rx="11" ry="13"/><ellipse cx="72" cy="66" rx="11" ry="13"/></g>
+        <g fill="${M.face}"><circle cx="48" cy="66" r="3.2"/><circle cx="72" cy="66" r="3.2"/><ellipse cx="60" cy="94" rx="5.5" ry="7"/></g></g>
+      <g class="face-party" style="display:none"><path d="M39 70Q48 58 57 70M63 70Q72 58 81 70" fill="none" stroke="${M.face}" stroke-width="4" stroke-linecap="round"/>
+        <path d="M44 84Q60 112 76 84Z" fill="${M.face}"/><path d="M52 95Q60 101 68 95" fill="none" stroke="${M.cheek}" stroke-width="3" stroke-linecap="round"/></g>
+      <g fill="${M.cheek}" opacity=".55"><ellipse cx="37" cy="83" rx="5" ry="3.5"/><ellipse cx="83" cy="83" rx="5" ry="3.5"/></g></g>`;
+    return { g, bob, body, shadow: feet.querySelector(".hero-shadow") };
   }
 
   function build(container, opts) {
@@ -62,6 +69,9 @@
     container.innerHTML = "";
     const theme = opts.theme || "light";
     const P = Art.PALETTES[theme] || Art.PALETTES.light;
+    const M = MAT[theme] || MAT.light;
+    const uid = "sc" + (++sceneN);
+    const casual = opts.difficulty === "casual";
     const svg = el("svg", { viewBox: `0 0 ${VIEW_W} ${VIEW_H}`, preserveAspectRatio: "xMidYMid slice", role: "img", "aria-label": "מדרגות הטיפוס", "data-theme": theme }, container);
     // sky decorations sit at the top right, clear of the streak pill (top left) and the back button (top right corner)
     const sky = theme === "dark"
@@ -72,11 +82,14 @@
     svg.innerHTML = `
       <defs>${Art.DEFS}
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".65" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
-        <linearGradient id="stepGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.step[0]}"/><stop offset="1" stop-color="${P.step[1]}"/></linearGradient>
+        <linearGradient id="stepGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${M.frontHi}"/><stop offset="1" stop-color="${M.frontLow}"/></linearGradient>
         <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.grass[0]}"/><stop offset="1" stop-color="${P.grass[1]}"/></linearGradient>
       </defs>
-      <rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#skyGrad)"/>${sky}`;
-    const far = el("g", {}, svg);
+      <rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#skyGrad)"/>
+      <rect class="hell-layer" width="${VIEW_W}" height="${VIEW_H}" fill="url(#${uid}hell)"/><g class="sky-deco">${sky}</g>`;
+    svg.querySelector("defs").insertAdjacentHTML("beforeend",
+      `<linearGradient id="${uid}hell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#211526"/><stop offset=".55" stop-color="#531B24"/><stop offset="1" stop-color="#B83A1D"/></linearGradient>`);
+    const far = el("g", { class: "far" }, svg);
     far.innerHTML = (theme === "pink" ? `<g transform="translate(150 214)">${Art.rainbow(150, 11)}</g>` : "") + `
       <path d="M-400 230 L-250 120 L-140 190 L-20 95 L110 185 L230 105 L360 190 L470 120 L640 230 Z" fill="${P.far[0]}" opacity=".7"/>
       <path d="M-400 240 L-300 170 L-180 215 L-60 150 L70 220 L190 160 L320 225 L450 165 L640 240 Z" fill="${P.far[1]}" opacity=".6"/>`;
@@ -87,7 +100,7 @@
     const world = el("g", { class: "world" }, svg);
     // the ground; its top edge is y = 0
     el("rect", { class: "ground", x: -1500, y: GROUND, width: 2400, height: 600, fill: "url(#grassGrad)" }, world);
-    el("rect", { x: -1500, y: GROUND, width: 2400, height: 4, fill: P.grassTop }, world);
+    el("rect", { class: "grass-top", x: -1500, y: GROUND, width: 2400, height: 4, fill: P.grassTop }, world);
     const deco = el("g", { class: "ground-deco" }, world);
     if (theme === "pink") {
       // lollipops instead of bushes, and a unicorn waiting next to the first stair
@@ -99,33 +112,45 @@
         `<g transform="translate(${bx} ${GROUND}) scale(${s})"><ellipse cx="0" cy="-6" rx="14" ry="7" fill="${P.bush[0]}"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="${P.bush[1]}"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="${P.bush[1]}"/></g>`).join("")
         + (theme === "dark" ? [[40, -14], [96, -26], [180, -12], [250, -30]].map(([x, y]) => `<circle class="twinkle" style="animation-delay:-${(x % 7) / 3}s" cx="${x}" cy="${y}" r="1.6" fill="#FFF3A0"/>`).join("") : "");
     }
-    // summit platform (wider top)
+    // three-plane stone stairs (front, top, side), far ones first so each nearer block covers the hidden parts
+    const block = (x0, x1, y) => {
+      const g = el("g", { "stroke-linejoin": "round" }, world);
+      g.innerHTML = `<path class="st-side" d="M${x1} ${y} L${x1 + DX} ${y - DY} L${x1 + DX} ${GROUND - DY} L${x1} ${GROUND} Z" fill="${M.side}" stroke="${M.outline}" stroke-width=".6"/>
+        <path class="st-top" d="M${x0} ${y} L${x0 + DX} ${y - DY} L${x1 + DX} ${y - DY} L${x1} ${y} Z" fill="${M.top}" stroke="${M.outline}" stroke-width=".6"/>
+        <line x1="${x0 + .6}" y1="${y + .8}" x2="${x1 - .6}" y2="${y + .8}" stroke="${M.bevel}" stroke-width="1.2" opacity=".8"/>`;
+      el("rect", { class: "step-block", x: x0, y, width: x1 - x0, height: GROUND - y, fill: "url(#stepGrad)", stroke: M.outline, "stroke-width": .6 }, g);
+      el("line", { x1: x1 - .4, y1: y + 1, x2: x1 - .4, y2: GROUND, stroke: M.seam, "stroke-width": .8, opacity: .25 }, g);
+      g.appendChild(g.querySelector(".step-block"));   // front face over the side's seam, under the top's bevel line
+      g.appendChild(g.querySelector("line"));
+      return g;
+    };
     const top = stepPos(STEPS);
-    el("rect", { class: "step-block", x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: GROUND - top.y, fill: "url(#stepGrad)" }, world);
-    el("rect", { x: top.x - W / 2 - 70, y: top.y, width: 70 + W, height: 5, fill: P.stepTop }, world);
-    // steps
+    block(top.x - W / 2 - 70, top.x + W / 2, top.y);
     const SPRINKLES = ["#FF4FA3", "#FFB020", "#A77BFF", "#3BA4F0", "#33C9A0"];
+    const flags = [];
     for (let i = STEPS - 1; i >= 1; i--) {
       const p = stepPos(i);
-      el("rect", { class: "step-block", x: p.x - W / 2, y: p.y, width: W, height: GROUND - p.y, fill: "url(#stepGrad)" }, world);
-      el("rect", { x: p.x - W / 2, y: p.y, width: W, height: 5, fill: P.stepTop }, world);
-      el("rect", { x: p.x + W / 2 - 4, y: p.y + 5, width: 4, height: GROUND - p.y - 5, fill: P.stepEdge, opacity: .5 }, world);
-      el("line", { x1: p.x + W / 2, y1: p.y, x2: p.x + W / 2, y2: p.y + H, stroke: P.stepEdge, "stroke-width": 1 }, world);
+      block(p.x - W / 2, p.x + W / 2, p.y);
       if (theme === "pink") {
-        // candy sprinkles on each stair face
+        // icing under the top edge with three drips, and up to three sprinkles per stair
         const g = el("g", {}, world);
-        g.innerHTML = [0, 1, 2].map((k) => {
-          const sx = p.x - W / 2 + 8 + ((i * 13 + k * 15) % (W - 14)), sy = p.y + 9 + ((i * 7 + k * 5) % 10);
-          return `<rect x="${sx}" y="${sy}" width="6" height="2.2" rx="1.1" fill="${SPRINKLES[(i + k) % SPRINKLES.length]}" transform="rotate(${(i * 37 + k * 50) % 180} ${sx + 3} ${sy + 1})"/>`;
-        }).join("");
+        const x0 = p.x - W / 2, d = (k) => x0 + 8 + ((i * 11 + k * 13) % (W - 16));
+        g.innerHTML = `<path d="M${x0} ${p.y} H${x0 + W} V${p.y + 4} ${[0, 1, 2].map((k) => `H${d(k) + 3} Q${d(k) + 1.5} ${p.y + 9} ${d(k)} ${p.y + 4}`).join(" ")} H${x0} Z" fill="#FFFFFF" opacity=".92"/>`
+          + [0, 1, 2].map((k) => {
+            const sx = x0 + 7 + ((i * 13 + k * 15) % (W - 14)), sy = p.y + 10 + ((i * 7 + k * 5) % 9);
+            return `<rect x="${sx}" y="${sy}" width="4" height="1.5" rx=".75" fill="${SPRINKLES[(i + k) % SPRINKLES.length]}" transform="rotate(${(i * 37 + k * 50) % 180} ${sx + 2} ${sy + .75})"/>`;
+          }).join("");
       }
       if (i % 5 === 0) {
+        // casual: a checkpoint pennant on the side of stairs 5, 10, 15; hardcore: a numbered stone marker
         const t = el("text", { x: p.x, y: p.y + 18, "text-anchor": "middle", "font-size": 11, "font-weight": 800, fill: P.stepText, "font-family": "AppSans" }, world);
         t.textContent = String(i);
-        const m = el("g", { transform: `translate(${p.x - W / 2 + 7} ${p.y})` }, world);
-        m.innerHTML = theme === "pink"
-          ? `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="#FFFFFF" stroke="rgba(214,60,140,.3)" stroke-width=".4"/>${Art.heart(7, -17, .9, color)}`
-          : `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="${theme === "dark" ? "#C3C5EC" : "#8A7354"}"/><path d="M.8 -21.5 L13 -17.5 L.8 -13.5 Z" fill="${color}" opacity=".85"/>`;
+        if (casual) {
+          const m = el("g", { class: "checkpoint", "data-step": i, transform: `translate(${p.x - W / 2 + 5} ${p.y})` }, world);
+          m.innerHTML = `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="${theme === "dark" ? "#C3C5EC" : "#8A7354"}"/>
+            <g class="pennant"><path d="M.8 -21.5 L15 -17 L.8 -12.5 Z" fill="${color}"/><path class="cp-check" d="M4.2 -17.2 l1.8 1.8 3.4 -3.6" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+          flags.push(m);
+        }
       }
     }
     // summit flag (and, in pink, a unicorn waiting at the top)
@@ -139,7 +164,15 @@
     }
     const glow = el("circle", { cx: top.x - 20, cy: top.y - 20, r: 46, fill: "url(#sunGlow)", opacity: 0 }, world);
 
-    const hero = monster(world);
+    const hero = monster(world, M, uid);
+    function paintFlags() {
+      const cp = Math.floor(Math.min(state.step, STEPS - 1) / 5) * 5;   // the checkpoint she falls back to
+      for (const f of flags) {
+        const n = +f.dataset.step;
+        f.classList.toggle("reached", state.step >= n);
+        f.classList.toggle("current", n === cp && state.step >= n);
+      }
+    }
 
     const state = { step: 0, x: 0, y: 0, cam: { x: CAM_X, y: CAM_Y }, raf: 0, alive: true };
 
@@ -152,8 +185,12 @@
     function camTarget(x, y) { return { x: x, y: y }; }
 
     function animate(dur, fn) {
+      // a new animation ends the running one (fast answers): finish it, so whatever waits for it still runs
       cancelAnimationFrame(state.raf);
-      return new Promise((resolve) => {
+      if (state.done) { const d = state.done; state.done = null; d(); }
+      return new Promise((resolve0) => {
+        const resolve = () => { if (state.done === resolve) state.done = null; resolve0(); };
+        state.done = resolve;
         if (reduced() || dur <= 0) { fn(1); apply(); resolve(); return; }
         const t0 = performance.now();
         const tick = (now) => {
@@ -182,30 +219,36 @@
         state.cam = camTarget(p.x, p.y);
         face(step >= STEPS ? "party" : "happy");
         glow.setAttribute("opacity", step >= STEPS ? 1 : 0);
-        apply();
+        apply(); paintFlags();
       },
       async hop() {
         const from = stepPos(state.step);
         state.step = Math.min(STEPS, state.step + 1);
+        paintFlags();
         const to = stepPos(state.step);
         const cam0 = { ...state.cam };
         const lift = 22;
-        await animate(430, (t) => {
+        await animate(320, (t) => {
           const e = ease.inOut(t);
           state.x = from.x + (to.x - from.x) * e;
           state.y = from.y + (to.y - from.y) * e - Math.sin(Math.PI * t) * lift;
           const c = ease.out(t);
           state.cam = { x: cam0.x + (to.x - cam0.x) * c, y: cam0.y + (to.y - cam0.y) * c };
+          const a = Math.sin(Math.PI * t);
+          if (hero.shadow) { hero.shadow.style.opacity = String(1 - a * .45); hero.shadow.setAttribute("transform", `translate(60 118) scale(${(1 - a * .28).toFixed(3)}) translate(-60 -118)`); }
         });
+        if (hero.shadow) { hero.shadow.style.opacity = ""; hero.shadow.removeAttribute("transform"); }
         hero.body.classList.remove("squash"); void hero.body.getBoundingClientRect(); hero.body.classList.add("squash");
+        paintFlags();
         if (state.step >= STEPS) { face("party"); glow.setAttribute("opacity", 1); }
       },
-      async fall() {
+      async fall(toStep) {
+        const back = Math.max(0, Math.min(state.step, toStep || 0));
         const from = stepPos(state.step);
-        const to = stepPos(0);
+        const to = stepPos(back);
         const cam0 = { ...state.cam };
         face("oops");
-        if (state.step === 0) {
+        if (state.step === back) {
           // already on the ground: a short stumble instead of a full fall that goes nowhere
           await animate(420, (t) => {
             const k = 1 - t;
@@ -217,8 +260,9 @@
           setTimeout(() => { if (state.alive && state.step < STEPS) face("happy"); }, 900);
           return;
         }
-        state.step = 0;
-        const dur = 520 + Math.min(20, Math.abs(from.x) / W) * 26;
+        const drop = state.step - back;
+        state.step = back;
+        const dur = 520 + Math.min(20, drop) * 26;
         await animate(dur, (t) => {
           const e = ease.in(t);
           state.x = from.x + (to.x - from.x) * ease.out(t);
@@ -227,16 +271,47 @@
           const c = ease.inOut(t);
           state.cam = { x: cam0.x + (to.x - cam0.x) * c, y: cam0.y + (to.y - cam0.y) * c };
         });
-        state.rot = 0; apply();
+        state.rot = 0; apply(); paintFlags();
         container.classList.remove("shake"); void container.offsetWidth; container.classList.add("shake");
         setTimeout(() => { if (state.alive && state.step < STEPS) face("happy"); }, 900);
       },
       celebrate() { face("party"); glow.setAttribute("opacity", 1); },
       destroy() { state.alive = false; cancelAnimationFrame(state.raf); },
     };
+    const blink = () => {
+      if (!state.alive) return;
+      const eyes = hero.body.querySelector(".face-happy .eyes");
+      if (eyes && !reduced()) { eyes.classList.remove("blink"); void eyes.getBoundingClientRect(); eyes.classList.add("blink"); }
+      const quiet = document.documentElement.dataset.mode === "boring";
+      state.blinkT = setTimeout(blink, (quiet ? 5000 : 4000) + Math.random() * 3000);
+    };
+    state.blinkT = setTimeout(blink, 2500);
+    const destroy0 = api.destroy;
+    api.destroy = () => { clearTimeout(state.blinkT); destroy0(); };
     api.set(opts.step || 0);
     return api;
   }
 
-  window.Scene = { create: build, STEPS };
+  let svgN = 0;
+  function monsterSvg(theme, face, cls, extra) {
+    const M = MAT[theme] || MAT.light, id = "ms" + (++svgN);
+    const faces = {
+      party: `<path d="M39 70Q48 58 57 70M63 70Q72 58 81 70" fill="none" stroke="${M.face}" stroke-width="4" stroke-linecap="round"/><path d="M44 84Q60 112 76 84Z" fill="${M.face}"/><path d="M52 95Q60 101 68 95" fill="none" stroke="${M.cheek}" stroke-width="3" stroke-linecap="round"/>`,
+      happy: `<g fill="${M.eye}"><ellipse cx="48" cy="68" rx="10" ry="12"/><ellipse cx="72" cy="68" rx="10" ry="12"/></g><g fill="${M.face}"><circle cx="50" cy="70" r="4.5"/><circle cx="74" cy="70" r="4.5"/></g><g fill="#fff"><circle cx="48.5" cy="68" r="1.5"/><circle cx="72.5" cy="68" r="1.5"/></g><path d="M47 87Q60 92 73 87Q60 108 47 87Z" fill="${M.face}"/>`,
+    };
+    return `<svg class="${cls || ""}" viewBox="0 0 120 128" aria-hidden="true"><defs>
+        <radialGradient id="${id}b" cx="32%" cy="22%" r="82%"><stop offset="0" stop-color="${M.mHi}"/><stop offset=".52" stop-color="${M.mMid}"/><stop offset="1" stop-color="${M.mLow}"/></radialGradient>
+        <linearGradient id="${id}h" x2=".3" y2="1"><stop stop-color="${M.hornHi}"/><stop offset="1" stop-color="${M.hornLow}"/></linearGradient></defs>
+      <g fill="${M.contact}"><ellipse cx="60" cy="121" rx="30" ry="5" opacity=".10"/><ellipse cx="60" cy="120" rx="19" ry="2.5" opacity=".18"/></g>
+      <path d="M38 49 31 14 51 43Z" fill="url(#${id}h)"/><path d="M69 43 89 14 82 49Z" fill="url(#${id}h)"/>
+      <g fill="${M.mLow}"><ellipse cx="46" cy="112" rx="12" ry="6"/><ellipse cx="74" cy="112" rx="12" ry="6"/></g>
+      <g fill="${M.mMid}"><ellipse cx="22" cy="56" rx="7" ry="13" transform="rotate(-28 22 56)"/><ellipse cx="98" cy="56" rx="7" ry="13" transform="rotate(28 98 56)"/></g>
+      <ellipse cx="60" cy="78" rx="34" ry="37" fill="url(#${id}b)"/>
+      <path d="M35 62C38 48 49 43 61 45" fill="none" stroke="${M.sheen}" stroke-width="3" stroke-linecap="round" opacity=".24"/>
+      <path d="M87 84C85 98 78 105 68 109" fill="none" stroke="${M.rim}" stroke-width="1.5" stroke-linecap="round" opacity=".18"/>
+      ${faces[face] || faces.happy}${extra || ""}
+      <g fill="${M.cheek}" opacity=".55"><ellipse cx="37" cy="83" rx="5" ry="3.5"/><ellipse cx="83" cy="83" rx="5" ry="3.5"/></g></svg>`;
+  }
+
+  window.Scene = { create: build, STEPS, monsterSvg };
 })();

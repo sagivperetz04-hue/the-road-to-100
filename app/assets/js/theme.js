@@ -35,7 +35,7 @@
     get setting() { return Store.theme; },
     set(setting) { Store.theme = THEMES.includes(setting) ? setting : "auto"; return apply(); },
     apply,
-    onChange(fn) { listeners.push(fn); },
+    onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; },
   };
   apply();
 })();

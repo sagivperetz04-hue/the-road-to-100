@@ -10,10 +10,13 @@
       const raw = window.localStorage.getItem(KEY);
       if (raw) data = JSON.parse(raw);
     } catch (e) { data = null; }
+    const existing = !!(data && typeof data === "object" && data.courses && Object.keys(data.courses).length);
     if (!data || typeof data !== "object") data = {};
     data.courses = data.courses || {};
     data.q = data.q || {};
     data.settings = Object.assign({ sound: true, music: true, theme: "auto" }, data.settings || {});
+    // the rules never change silently: players from before keep the full reset
+    if (data.settings.difficulty !== "casual" && data.settings.difficulty !== "hardcore") data.settings.difficulty = existing ? "hardcore" : "casual";
     mem = data;
     return mem;
   }
@@ -42,6 +45,9 @@
     set theme(v) { read().settings.theme = String(v); write(); },
     get music() { return !!read().settings.music; },
     /** "cool" (למגניבים בלבד: music, hell mode) or "boring" (משעמם: neither). Picked on the first screen. */
+    /** "hardcore" (a wrong answer: back to stair 0) or "casual" (back to the last checkpoint: 5, 10 or 15). */
+    get difficulty() { return read().settings.difficulty === "hardcore" ? "hardcore" : "casual"; },
+    set difficulty(v) { read().settings.difficulty = v === "hardcore" ? "hardcore" : "casual"; write(); },
     get mode() { return read().settings.mode === "boring" ? "boring" : "cool"; },
     set mode(v) { read().settings.mode = v === "boring" ? "boring" : "cool"; write(); },
     set music(v) { read().settings.music = !!v; write(); },
@@ -56,7 +62,7 @@
       write();
     },
 
-    sourceStats(cid, source) { const s = src(cid, source); return { best: s.best || 0, summits: s.summits || 0 }; },
+    sourceStats(cid, source) { const s = src(cid, source); return { best: s.best || 0, summits: s.summits || 0, casualSummits: s.casualSummits || 0 }; },
     bestForCourse(cid) {
       const c = course(cid);
       return Object.values(c.sources).reduce((m, s) => Math.max(m, s.best || 0), 0);
@@ -66,7 +72,12 @@
       if (streak > (s.best || 0)) { s.best = streak; write(); return true; }
       return false;
     },
-    recordSummit(cid, source) { const s = src(cid, source); s.summits = (s.summits || 0) + 1; write(); return s.summits; },
+    /** Hardcore and casual summits are kept apart (a casual summit isn't 20 in a row). */
+    recordSummit(cid, source, casual) {
+      const s = src(cid, source);
+      if (casual) { s.casualSummits = (s.casualSummits || 0) + 1; write(); return s.casualSummits; }
+      s.summits = (s.summits || 0) + 1; write(); return s.summits;
+    },
 
     qStats(qid) { const v = read().q[qid]; return v ? { seen: v[0], wrong: v[1] } : { seen: 0, wrong: 0 }; },
     recordAnswer(qid, correct) {

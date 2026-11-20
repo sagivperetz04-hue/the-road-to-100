@@ -140,13 +140,24 @@ To add a theme: add a `[data-theme="name"]` token block in `app.css`, a palette 
 `BARS` in `theme.js`, and an entry in `THEME_INFO` in `app.js`. The e2e test screenshots every screen in every
 theme (`build/screenshots/theme-*`).
 
-## Modes
+## Start screen, modes and difficulty
 
-The app opens on a mode screen (every launch; the last choice is marked). It is saved as `settings.mode`:
-- **משעמם** (`boring`): no music at all, no hell mode on stair 19, no music tab. Sound effects stay.
-- **למגניבים בלבד** (`cool`): everything below.
+The loading screen turns into the start screen: the sky card shrinks to the top, the monster takes the crown and
+says a line of the day (`LINES` in `app.js`, picked by date), and the two modes rise below. The last-used mode is
+the big card. Three independent settings (all in `stairs.v1`):
 
-The "מצב" pill on the courses screen goes back to the mode screen.
+- **Theme** (`settings.theme`): light, dark, pink; colours, materials and scenery.
+- **Presentation mode** (`settings.mode`): **משעמם** (`boring`) is the calm miniature world: no music, golden
+  light instead of hell on stair 19, drifting stars on the summit, no bobbing. **למגניבים בלבד** (`cool`): music,
+  hell mode on stair 19, beat-synced confetti. The "מצב" pill on the courses screen opens the start screen again.
+- **Difficulty** (`settings.difficulty`): **casual** ("עם נקודות שמירה": a wrong answer falls back to the last
+  checkpoint, stair 5, 10 or 15) or **hardcore** ("נפילה להתחלה": back to 0). New installs start casual; players
+  from before keep hardcore. A run's difficulty is fixed when it starts. Casual summits are counted apart
+  (`casualSummits`); the best streak is always real consecutive answers.
+
+## Design system
+
+Reviewed over four rounds with GPT-6 Astra (design) and GPT-6.1 Sol (engineering); see `docs/ui-design-notes.md`.
 
 ## Music
 

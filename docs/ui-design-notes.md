@@ -97,3 +97,33 @@ Nothing below blocks a release. Ordered by how much each would improve the app.
   so it isn't reliable for driving the game. Use DevTools instead.
 - Emulator on this PC: it boots only with 1 CPU core and with netsim's features turned off. See the project
   README.
+
+## Premium pass (20 Nov 2026): the design system, frozen
+
+Worked out with an LLM council (five advisors, peer review, chairman) for the start screen, then four review
+rounds with GPT-6 Astra; the code was reviewed by GPT-6.1 Sol. Astra's final position: freeze the system; what's
+left is device-level (frame pacing and haptic feel on the real phone).
+
+- **One language, three emphasis levels.** Containers: 24px radius, 1px hairline, soft shadow, no lip. Answers:
+  18px radius, 2px edge. The primary action: 18px radius, 4px edge + coloured shadow. Pills and badges are flat.
+  Gloss only on eyes, gems and the crown.
+- **Colour only where it means something.** Neutral 28px answer letters (pink keeps its candy letters on purpose).
+  Palette tokens per theme at the end of `app.css` ("PREMIUM PASS").
+- **Type scale:** heading 28/34·800, question 23/32·700, answer 18/27·600, explanation 17/27·400, meta 13/20·500.
+  16px gutters, 20px card padding, spacing 4/8/12/16/24/32.
+- **World:** one light source (upper left). The monster (viewBox 120×128, feet at 60,118) and three-plane stairs
+  share materials per theme: light stone, pink candy (icing, sprinkles), dark moonlit (`MAT` in `scene.js`).
+- **Game screen:** scene `clamp(180px, 26svh, 224px)`; HUD = ring + "מתוך 20 / שיא N" and a 48px back button;
+  scene messages (checkpoint, "עוד תשובה אחת לפסגה") in a reserved strip at the scene bottom; 12px clear gap and
+  an 8px fade above the reading area. After an answer the view scrolls only the minimum, never hiding the
+  explanation's heading. Celebration effects stay inside the scene.
+- **Stair 19:** cool = hell inside the scene only (sky/ground/stone recolour, one skull, a 40px flame line, a lava
+  edge, 8 embers; the card stays calm); quiet = golden light.
+- **Victory:** the crowned monster, one title, one line, two opaque stat cards, a 56px replay + a quiet text link;
+  rays 4%; confetti behind the content (60 pieces, beat bursts, at most 80 alive; quiet: drifting stars).
+- **Motion:** press 80ms `cubic-bezier(.2,0,0,1)`, release 140ms `cubic-bezier(.2,.8,.2,1)`, screen entrance
+  220ms fade + 12px `cubic-bezier(.22,1,.36,1)`, hop 320ms with a 120ms landing squash; only transform/opacity.
+- **Sound and haptics:** music ducks -4 dB (30ms/220ms); short success/wrong motifs; Android semantic haptics
+  (CONFIRM, REJECT, EFFECT_HEAVY_CLICK for milestones, THUD primitives for the stair-19 heartbeat on Android 12+);
+  nothing vibrates in the background and the touch-feedback setting is respected.
+

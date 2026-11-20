@@ -12,6 +12,7 @@
   const nQuestions = (n) => plural(n, "שאלה אחת", "שאלות");
   const nTopics = (n) => plural(n, "נושא אחד", "נושאים");
   const ltr = (s) => `<bdi dir="ltr">${esc(s)}</bdi>`;
+  const chain = (s) => esc(s).replace(/ ?(←|→) ?/g, "\u00A0$1\u00A0");
   const haptic = (kind) => { try { if (window.AndroidBridge && window.AndroidBridge.haptic) window.AndroidBridge.haptic(kind); } catch (e) { /* no bridge in the browser */ } };
   /** Android-style pattern [off, on, off, on, ...] in ms; repeat = index to loop from, or -1 for once. */
   const vibrate = (pattern, repeat) => {
@@ -52,7 +53,7 @@
   let busy = false;
 
   async function push(scr) {
-    if (busy) return;
+    if (busy) { if (scr && scr.destroy) scr.destroy(); return; }
     busy = true;
     const prev = stack[stack.length - 1];
     stack.push(scr);
@@ -93,12 +94,14 @@
   // background music follows the top screen: the game has its own playlist, every other screen plays "menu"
   function syncMusic() {
     const top = stack[stack.length - 1];
-    if (top) Sound.music(top.el.dataset.screen === "mode" ? null : top.el.dataset.screen === "game" ? "game" : "menu");
+    if (start) { Sound.music(null); return; }       // silence until a mode is picked
+    if (top) Sound.music(top.el.dataset.screen === "game" ? "game" : "menu");
   }
 
   function back() {
     const ov = overlays[overlays.length - 1];
     if (ov) { ov.onBack(); return "handled"; }
+    if (start) { if (start.boot) return "exit"; closeStart(); return "handled"; }   // the start screen
     if (stack.length <= 1) return (stack[0] && stack[0].onRootBack && stack[0].onRootBack()) || "exit";
     const top = stack[stack.length - 1];
     if (top.onBack) top.onBack(); else pop();
@@ -181,6 +184,7 @@
         <div class="section-footer">ההתקדמות נשמרת במכשיר הזה.</div>
       </div></section>`);
     wireScroller(el);
+    const offs = [];
     const snd = $('[data-act="sound"]', el);
     const paintSound = () => { snd.innerHTML = Icons.sound(Store.sound); snd.setAttribute("aria-pressed", Store.sound ? "true" : "false"); snd.setAttribute("aria-label", Store.sound ? "השתקת צלילים" : "הפעלת צלילים"); };
     snd.addEventListener("click", () => { Store.sound = !Store.sound; if (!Store.sound) Sound.stop(); else { Sound.unlock(); Sound.sfx("tap"); } Sound.refresh(); paintSound(); });
@@ -190,14 +194,14 @@
       const paintMusic = () => { mus.innerHTML = Icons.music(Store.music); mus.setAttribute("aria-pressed", Store.music ? "true" : "false"); mus.setAttribute("aria-label", Store.music ? "השתקת מוזיקה" : "הפעלת מוזיקה"); };
       mus.addEventListener("click", () => { Store.music = !Store.music; Sound.unlock(); Sound.sfx("tap"); Sound.refresh(); paintMusic(); });
       paintMusic();
-      Sound.onChange(() => { paintMusic(); paintSound(); });   // the music tab's play button can switch them on
+      offs.push(Sound.onChange(() => { paintMusic(); paintSound(); }));   // the music tab's play button can switch them on
     }
 
     const paintBanner = () => { $("[data-banner]", el).innerHTML = Art.banner(Theme.current); };
     paintBanner();
-    Theme.onChange(paintBanner);
+    offs.push(Theme.onChange(paintBanner));
     $('[data-act="theme"]', el).addEventListener("click", () => { Sound.unlock(); Sound.sfx("tap"); haptic("tap"); themeSheet(); });
-    $('[data-act="mode"]', el).addEventListener("click", () => { Sound.sfx("tap"); haptic("tap"); resetRoot(modeScreen()); });
+    $('[data-act="mode"]', el).addEventListener("click", () => { Sound.sfx("tap"); haptic("tap"); openStart(); });
 
     function render() {
       const list = $("[data-list]", el);
@@ -206,7 +210,7 @@
         return `<button class="row course-row" data-id="${esc(c.id)}">
           <span class="icon-tile" style="background:${courseColor(c)}">${(Icons[c.icon] || Icons.book)()}</span>
           <span class="row-body"><span class="row-title">${esc(c.name)}</span>
-            <span class="row-sub"><span class="meta-item">${ltr(c.code)}</span> · <span class="meta-item">${nTopics(c.topics.length)}</span> · <span class="meta-item">${nQuestions(c.questions.length)}</span></span>
+            <span class="row-sub"><span class="meta-item">${nTopics(c.topics.length)}</span> · <span class="meta-item">${nQuestions(c.questions.length)}</span></span>
             <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span>${best ? `<span class="course-progress" style="--p:${(Math.min(best, GOAL) / GOAL).toFixed(2)}" aria-hidden="true"><i></i></span>` : ""}</span></span>
           <span class="row-trail">${Icons.chevron()}</span>
         </button>`;
@@ -217,7 +221,7 @@
       }));
     }
     render();
-    return { el, onShow: render };
+    return { el, onShow: render, destroy() { offs.forEach((f) => f()); } };
   }
 
   /* ------------------------------------------------------------------ screen 2: topics */
@@ -374,7 +378,10 @@
     </section>`);
 
     const sceneBox = $("[data-scene]", el);
-    const scene = Scene.create(sceneBox, { color: course.color || "#FF9500", theme: Theme.current });
+    const casual = Store.difficulty === "casual";      // fixed for this run
+    const quiet = Store.mode === "boring";
+    let run = 0;                                         // correct answers in a row (the record), apart from the stair
+    const scene = Scene.create(sceneBox, { color: course.color || "#FF9500", theme: Theme.current, difficulty: Store.difficulty });
     const stepCap = h('<span class="caption-step" data-stepcap></span>');
     sceneBox.appendChild(stepCap);
     const card = $("[data-card]", el);
@@ -391,6 +398,8 @@
       ring.setAttribute("aria-label", `רצף ${streak} מתוך ${GOAL}`);
       if (pulse && !reduced()) { ring.classList.remove("pulse"); void ring.offsetWidth; ring.classList.add("pulse"); }
       stepCap.textContent = streak >= GOAL ? "פסגה!" : `מדרגה ${streak} מתוך ${GOAL}`;
+      const lbl = $(".ring-label", el);
+      if (lbl) lbl.firstChild.textContent = `מתוך ${GOAL}`;
     }
 
     function showIsland(meta) {
@@ -424,7 +433,7 @@
       const chain = (side) => `<svg class="chain ${side}" viewBox="0 0 20 200" aria-hidden="true">${Array.from({ length: 11 }, (_, k) =>
         k % 2 ? `<rect x="8" y="${k * 18}" width="4" height="22" rx="2" fill="#3B3B40" stroke="#16161A"/>`
               : `<ellipse cx="10" cy="${k * 18 + 10}" rx="6" ry="11" fill="none" stroke="#4A4A50" stroke-width="3.5"/>`).join("")}</svg>`;
-      const embers = Array.from({ length: 22 }, () => `<i class="ember" style="--x:${(Math.random() * 100).toFixed(1)}%;--d:${(2.4 + Math.random() * 2.6).toFixed(2)}s;--w:${(-Math.random() * 4).toFixed(2)}s;--dx:${(Math.random() * 60 - 30).toFixed(0)}px"></i>`).join("");
+      const embers = Array.from({ length: 8 }, () => `<i class="ember" style="--x:${(Math.random() * 100).toFixed(1)}%;--d:${(2.4 + Math.random() * 2.6).toFixed(2)}s;--w:${(-Math.random() * 4).toFixed(2)}s;--dx:${(Math.random() * 60 - 30).toFixed(0)}px"></i>`).join("");
       const row = (cls, count) => `<div class="flames ${cls}">${Array.from({ length: count }, (_, i) => flame(i)).join("")}</div>`;
       return h(`<div class="rage-fx" aria-hidden="true">
         <svg width="0" height="0" style="position:absolute"><defs>
@@ -432,12 +441,9 @@
           <linearGradient id="rgC${n}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#FFE96B"/><stop offset="1" stop-color="#FFB000" stop-opacity="0"/></linearGradient></defs></svg>
         <div class="hell-sky"></div>
         <div class="demon">${skull(true)}</div>
-        ${chain("left")}${chain("right")}
-        <div class="pike left">${skull(false)}<i></i></div><div class="pike right">${skull(false)}<i></i></div>
         ${row("ground", 12)}
-        ${row("floor", 9)}
+        <div class="lava"></div>
         <div class="embers">${embers}</div>
-        <div class="vignette"></div>
       </div>`);
     }
     function setRage(on) {
@@ -446,7 +452,7 @@
         rage = rageLayer();
         sceneBox.after(rage);
         el.classList.add("rage");
-        const slam = h('<div class="slam" aria-live="assertive"><b>שלב אחרון</b><span>טעות אחת – וחוזרים לתחתית</span></div>');
+        const slam = h(`<div class="slam" aria-live="assertive"><b>תשובה אחת לפסגה</b><span>${casual ? "טעות אחת – וחוזרים למדרגה 15" : "טעות אחת – וחוזרים לתחתית"}</span></div>`);
         el.appendChild(slam);
         setTimeout(() => slam.remove(), 2600);
         Sound.final(true);
@@ -462,6 +468,24 @@
       }
     }
 
+    let golden = null;
+    function setGolden(on) {
+      if (on === !!golden) return;
+      if (on) {
+        golden = h('<div class="golden-fx" aria-hidden="true"><span>עוד תשובה אחת לפסגה</span></div>');
+        sceneBox.appendChild(golden);
+        el.classList.add("golden");
+        haptic("heavy");
+      } else { golden.remove(); golden = null; el.classList.remove("golden"); }
+    }
+    function checkpointToast(n) {
+      const t = h(`<div class="cp-toast" role="status">${Icons.tick()}<span>נקודת שמירה: ${n}</span></div>`);
+      sceneBox.appendChild(t);
+      haptic("heavy");
+      if (!quiet) celebrate();
+      setTimeout(() => t.remove(), 1400);
+    }
+
     function nextQuestion() {
       if (!deck.length) deck = buildDeck(pool, lastId);
       current = deck.shift();
@@ -475,10 +499,11 @@
           <span class="badge ${current.source}">${current.source === "real" ? Icons.exam() : Icons.sparkles()}${esc(info.badge)}</span></div>
         <div class="q-text" id="qtext">${esc(current.q)}</div>
         <div class="opts" role="group" aria-labelledby="qtext">
-          ${order.map((oi, k) => `<button class="opt" data-oi="${oi}"><span class="opt-letter" aria-hidden="true">${LETTERS[k]}</span><span class="opt-text">${esc(current.options[oi])}</span><span class="opt-mark"></span></button>`).join("")}
+          ${order.map((oi, k) => `<button class="opt" data-oi="${oi}"><span class="opt-letter" aria-hidden="true">${LETTERS[k]}</span><span class="opt-text">${chain(current.options[oi])}</span><span class="opt-mark"></span></button>`).join("")}
         </div>
         <div data-explain></div>`;
       $$(".opt", card).forEach((b) => b.addEventListener("click", () => answer(+b.dataset.oi, b)));
+      $("[data-next]", el).textContent = "לשאלה הבאה";
       foot.classList.remove("show");
       body.scrollTop = 0;
     }
@@ -495,28 +520,33 @@
         else if (b === btn) { b.classList.add("wrong"); $(".opt-mark", b).innerHTML = Icons.cross(); }
         else b.classList.add("dim");
       });
+      const back = casual ? Math.floor(Math.min(streak, GOAL - 1) / 5) * 5 : 0;
       $("[data-explain]", card).innerHTML = `<div class="explain ${ok ? "ok" : "bad"}" role="status">
-        <h3>${ok ? Icons.tick() : Icons.cross()}${ok ? "נכון!" : "לא נכון – חוזרים למטה"}</h3>
+        <h3>${ok ? Icons.tick() : Icons.cross()}${ok ? "נכון!" : back ? `לא נכון – חוזרים למדרגה ${back}` : "לא נכון – חוזרים למטה"}</h3>
         <div>${esc(current.explanation || "")}</div>${current.ref ? `<div class="ref">מקור: ${esc(current.ref)}</div>` : ""}</div>`;
 
       if (ok) {
-        streak += 1;
-        Sound.sfx("correct"); haptic("success");
-        celebrate(btn || $(`.opt[data-oi="${current.answer}"]`, card));
-        Store.recordStreak(course.id, source, streak);
+        // the state shows at once; the hop (~320 ms) follows, with a crisp haptic on landing
+        streak += 1; run += 1;
+        Sound.sfx("correct"); haptic("tap");
+        if (!quiet) setTimeout(() => { if (alive) celebrate(); }, 300);   // at the landing
+        Store.recordStreak(course.id, source, run);
         paintRing(true);
-        const hop = scene.hop();
-        if (streak >= GOAL) { setRage(false); await hop; if (alive) openSummit(); return; }
-        if (streak === GOAL - 1 && Store.mode !== "boring") setRage(true);
-        if (streak % 5 === 0) setTimeout(() => { if (alive) showIsland(Sound.playClip(false)); }, 350);
+        const hop = scene.hop().then(() => { if (alive) haptic("success"); });
+        if (streak >= GOAL) { setRage(false); setGolden(false); await hop; if (alive) openSummit(); return; }
+        if (streak === GOAL - 1) { if (quiet) setGolden(true); else setRage(true); $("[data-next]", el).textContent = "לשאלה האחרונה"; }
+        if (streak % 5 === 0) {
+          if (casual) checkpointToast(streak);
+          setTimeout(() => { if (alive) showIsland(Sound.playClip(false)); }, 350);
+        }
       } else {
         const had = streak;
-        streak = 0;
-        setRage(false);
+        streak = back; run = 0;
+        setRage(false); setGolden(false);
         Sound.sfx("wrong"); haptic("error");
-        if (had > 0) setTimeout(() => Sound.sfx("fall"), 120);
+        if (had > back) setTimeout(() => Sound.sfx("fall"), 120);
         paintRing(false);
-        scene.fall();
+        scene.fall(back);
       }
       foot.classList.add("show");
       $("[data-next]", el).focus({ preventScroll: true });
@@ -537,21 +567,23 @@
     }
 
     /** A star burst from the answer button and a "+1" by the streak ring. */
-    function celebrate(btn) {
-      if (reduced() || !btn) return;
-      const box = el.getBoundingClientRect(), r = btn.getBoundingClientRect();
+    function celebrate() {
+      if (reduced()) return;
+      const box = sceneBox.getBoundingClientRect();
+      const hero = sceneBox.querySelector(".hero-body") || sceneBox;
+      const r = hero.getBoundingClientRect();
+      const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
       const burst = h('<div class="burst" aria-hidden="true"></div>');
-      burst.style.left = `${r.left - box.left + 30}px`; burst.style.top = `${r.top - box.top + r.height / 2}px`;
+      burst.style.left = `${cx}px`; burst.style.top = `${cy}px`;
       const colors = ["#FFC93C", "#FF4FA3", "#4FB8FF", "#5FD68A", "#A77BFF"];
       burst.innerHTML = Array.from({ length: 12 }, (_, i) => {
         const a = (i / 12) * Math.PI * 2 + Math.random() * .4, d = 42 + Math.random() * 38;
         return `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--c:${colors[i % colors.length]};animation-delay:${(Math.random() * .06).toFixed(2)}s"></i>`;
       }).join("");
-      el.appendChild(burst);
-      const ring = $("[data-ring]", el).getBoundingClientRect();
+      sceneBox.appendChild(burst);
       const plus = h('<div class="plus-one" aria-hidden="true">+1</div>');
-      plus.style.left = `${ring.left - box.left + ring.width / 2 - 12}px`; plus.style.top = `${ring.bottom - box.top + 2}px`;
-      el.appendChild(plus);
+      plus.style.left = `${cx - 12}px`; plus.style.top = `${Math.max(4, r.top - box.top - 30)}px`;
+      sceneBox.appendChild(plus);
       setTimeout(() => { burst.remove(); plus.remove(); }, 1100);
     }
 
@@ -577,16 +609,18 @@
         : theme === "dark" ? ["#FFD45C", "#FF8FC6", "#9C8FFF", "#5BE3C0", "#7FB8FF", "#FFFFFF"]
         : ["#FF2D55", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE"];
       const shapes = theme === "pink" ? ["rect", "circle", "heart", "star", "ribbon"] : ["rect", "rect", "circle", "star", "ribbon"];
-      const N = 128, BEAT = 500, DANCE0 = 1300, DANCE1 = 9800, FADE0 = 9100, FADE1 = 10350;
+      // cool: 60 pieces in three bursts, then short beat bursts (at most 80 alive); quiet: a few drifting stars
+      const calm = !onBeat;
+      const N = calm ? 16 : 60, CAP = 80, BEAT = 500, DANCE0 = 1300, DANCE1 = 9800, FADE0 = 9100, FADE1 = 10350;
       const bursts = [[1120, 0.5, 0.36], [1420, 0.22, 0.44], [1720, 0.78, 0.44]];   // [ms, x, y] as fractions
       const parts = [];
       for (let i = 0; i < N; i++) {
         const b = bursts[i % 3];
-        const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5, sp = (7 + Math.random() * 9) * dpr;
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.5, sp = (calm ? 1 + Math.random() * 2 : 7 + Math.random() * 9) * dpr;
         parts.push({
           born: b[0], bx: b[1], by: b[2], vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, x: 0, y: 0, live: false,
           hx: 0.04 + Math.random() * 0.92, hy: 0.04 + Math.random() * 0.9,          // its spot in the dance
-          r: (6 + Math.random() * 7) * dpr, c: palette[i % palette.length], shape: shapes[i % shapes.length],
+          r: (6 + Math.random() * 7) * dpr, c: calm ? "#FFE27A" : palette[i % palette.length], shape: calm ? "star" : shapes[i % shapes.length],
           a: Math.random() * 6.28, va: (Math.random() - 0.5) * 0.25, ph: Math.random() * 6.28, sway: (10 + Math.random() * 18) * dpr,
         });
       }
@@ -598,7 +632,6 @@
           case "circle": ctx.beginPath(); ctx.arc(0, 0, r * 0.38, 0, 6.283); ctx.fill(); break;
           case "ribbon": ctx.scale(sx, 1); ctx.fillRect(-r * 0.12, -r * 0.7, r * 0.24, r * 1.4); break;
           case "star": {
-            if (theme === "dark") { ctx.shadowColor = p.c; ctx.shadowBlur = 8 * dpr; }
             ctx.beginPath(); const R = r * 0.6, q = R * 0.22;
             ctx.moveTo(0, -R); ctx.quadraticCurveTo(q, -q, R, 0); ctx.quadraticCurveTo(q, q, 0, R);
             ctx.quadraticCurveTo(-q, q, -R, 0); ctx.quadraticCurveTo(-q, -q, 0, -R); ctx.fill(); break;
@@ -620,23 +653,39 @@
         last = now;
         const t = now - t0;
         // the beat: a pulse that makes the dance jump, and a callback for the monster
-        if (t >= DANCE0 && t < DANCE1) {
+        if (!calm && t >= DANCE0 && t < DANCE1) {
           const n = Math.floor((t - DANCE0) / BEAT);
-          if (n !== beatN) { beatN = n; pulseAt = t; if (onBeat) try { onBeat(n); } catch (e) { /* ignore */ } }
+          if (n !== beatN) {
+            beatN = n; pulseAt = t;
+            if (onBeat) try { onBeat(n); } catch (e) { /* ignore */ }
+            // a short burst on the beat: four pieces that fall and fade within 1.4 s
+            const live = parts.filter((q) => q.live && !q.dead).length;
+            for (let k = 0; k < 4 && live + k < CAP && t < FADE0 - 1400; k++) {
+              parts.push({ born: t, bx: .1 + Math.random() * .8, by: .05, vx: (Math.random() - .5) * 6 * dpr, vy: (1 + Math.random() * 2) * dpr, x: 0, y: 0, live: false, ttl: 1400,
+                hx: 0, hy: 0, r: (6 + Math.random() * 6) * dpr, c: palette[(n + k) % palette.length], shape: shapes[(n + k) % shapes.length], a: Math.random() * 6.28, va: (Math.random() - .5) * .3, ph: Math.random() * 6.28, sway: 0 });
+            }
+          }
         }
         const pulse = Math.exp(-(t - pulseAt) / 140);              // 1 on the beat, fading fast
         const strong = beatN % 4 === 0 ? 1.6 : 1;                    // every 4th beat is a bigger wave
         const alpha = 1 - ease((t - FADE0) / (FADE1 - FADE0));
         ctx.clearRect(0, 0, W, H);
         for (const p of parts) {
-          if (t < p.born) continue;
+          if (t < p.born || p.dead) continue;
           if (!p.live) { p.live = true; p.x = p.bx * W; p.y = p.by * H; }
+          if (p.ttl) {                                                  // a beat piece: falls, then fades out
+            const age = t - p.born;
+            if (age > p.ttl) { p.dead = true; continue; }
+            p.vy += 0.25 * dpr * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.va * dt;
+            draw(p, alpha * (1 - age / p.ttl));
+            continue;
+          }
           // burst physics, then glide into the dance spot
           p.vx *= Math.pow(0.95, dt); p.vy = p.vy * Math.pow(0.95, dt) + 0.25 * dpr * dt;
           const bx = p.x + p.vx * dt, by = p.y + p.vy * dt;
           const life = t - p.born, k = ease((life - 500) / 1100);
           const wave = Math.sin(t / 1000 * Math.PI * 2 * 0.5 + p.hx * 7 + p.ph);           // a slow wave across the screen
-          const hop = pulse * strong * 26 * dpr * Math.sin(p.hx * 9 + beatN);              // the beat makes rows jump
+          const hop = calm ? 0 : pulse * strong * 26 * dpr * Math.sin(p.hx * 9 + beatN);   // the beat makes rows jump
           const dx = p.hx * W + Math.sin(t / 700 + p.ph) * p.sway;
           const dy = p.hy * H + wave * 22 * dpr - hop;
           p.x = bx + (dx - bx) * k * 0.12 * dt; p.y = by + (dy - by) * k * 0.12 * dt;
@@ -653,7 +702,7 @@
 
     function openSummit() {
       summitOpen = true;
-      const summits = Store.recordSummit(course.id, source);
+      const summits = Store.recordSummit(course.id, source, casual);
       const st = Store.sourceStats(course.id, source);
       scene.celebrate();
       Sound.music("summit");
@@ -667,31 +716,19 @@
       const mini = `<svg class="sm-mini" viewBox="0 0 24 18" aria-hidden="true"><path d="M2 15L1 4l6 5 5-8 5 8 6-5-1 11z" fill="#FFC21A" stroke="#E08A00" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
       const ov = h(`<div class="summit" role="dialog" aria-modal="true" aria-labelledby="sm-t">
         <div class="rays" aria-hidden="true"></div>
-        <div class="sm-badge">${mini}<span>${summits === 1 ? "הפסגה הראשונה נכבשה" : `הפסגה מספר ${summits} נכבשה`}</span>${mini}</div>
-        <div class="stage">${buddy(true)}<span class="hero-wrap"><span class="sm-sparkle s1"></span><span class="sm-sparkle s2"></span><span class="sm-sparkle s3"></span>${Icons.crown()}
-        <svg class="hero" viewBox="-40 -64 80 70" aria-hidden="true"><defs><radialGradient id="heroGrad2" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF9BD2"/><stop offset=".55" stop-color="#E05CC8"/><stop offset="1" stop-color="#9B3FC4"/></radialGradient></defs>
-          <ellipse cx="-6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/><ellipse cx="6" cy="-3" rx="5" ry="3.4" fill="#7A3FA8"/>
-          <path d="M-9 -29 L-12 -40 L-3 -32 Z M9 -29 L12 -40 L3 -32 Z" fill="#FFD60A" stroke="#E0A800" stroke-width=".8"/>
-          <ellipse cx="0" cy="-17" rx="15" ry="15.5" fill="url(#heroGrad2)"/>
-          <path d="M-14 -16 L-24 -30 M14 -16 L24 -30" stroke="#C04FC9" stroke-width="6" stroke-linecap="round"/>
-          <path d="M-9 -20 Q-5.5 -25 -2 -20 M2 -20 Q5.5 -25 9 -20" fill="none" stroke="#1c1c1e" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M-6 -14 Q0 -6.5 6 -14 Z" fill="#5B1A61"/>
-          <circle cx="-10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/><circle cx="10" cy="-15" r="2.3" fill="#FF6FA8" opacity=".6"/></svg></span>${buddy(false)}</div>
-        <div class="kicker">${GOAL} תשובות נכונות ברצף!</div>
+        <div class="stage">${buddy(true)}<span class="hero-wrap"><span class="sm-sparkle s1"></span><span class="sm-sparkle s2"></span><span class="sm-sparkle s3"></span>${Icons.crown()}${Scene.monsterSvg(theme, "party", "hero")}</span>${buddy(false)}</div>
         <h2 id="sm-t">ציציפלצת האולטימטיבית</h2>
-        <p>${esc(course.name)}</p>
-        <div class="sm-chip"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.5 5.2 5.7.8-4.1 4 1 5.6L10 14.7l-5.1 2.7 1-5.6-4.1-4 5.7-.8z" fill="currentColor"/></svg>הישג מושלם: 20 מתוך 20</div>
+        <p class="sm-line">${summits === 1 ? "הפסגה הראשונה שלך!" : casual ? "הגעת לפסגה!" : `${GOAL} תשובות נכונות ברצף`} · ${esc(course.name)}</p>
         <div class="stats">
-          <div class="stat"><b data-to="${summits}">${summits}</b><span>${summits === 1 ? "פסגה ראשונה" : "פסגות בקורס"}</span></div>
           <div class="stat key"><b data-to="${st.best}">${st.best}</b><span>שיא רצף</span></div>
-          <div class="stat"><b data-to="${pool.length}">${pool.length}</b><span>שאלות במאגר</span></div>
+          <div class="stat"><b data-to="${summits}">${summits}</b><span>${casual ? "פסגות עם נקודות שמירה" : "פסגות בקורס"}</span></div>
         </div>
-        <div class="actions"><button class="btn-primary" data-again>עוד טיפוס</button><button class="btn-secondary" data-menu>חזרה לבחירת שאלות</button></div>
+        <div class="actions"><button class="btn-primary" data-again>עוד טיפוס</button><button class="btn-quiet" data-menu>חזרה לבחירת שאלות</button></div>
       </div>`);
       const heroWrap = $(".hero-wrap", ov);
-      const stop = confetti(ov, theme, () => {
+      const stop = confetti(ov, theme, quiet ? null : () => {
         if (!heroWrap) return;
-        heroWrap.classList.remove("beat"); void heroWrap.offsetWidth; heroWrap.classList.add("beat");
+        if (heroWrap.animate) heroWrap.animate([{ filter: "drop-shadow(0 0 14px rgba(255,210,90,.85))" }, { filter: "none" }], { duration: 420, easing: "ease-out" });
       });
       if (!reduced()) {
         const nums = $$(".stat b[data-to]", ov);
@@ -707,7 +744,7 @@
       const close = () => { stop(); ov.remove(); overlays.splice(overlays.indexOf(entry), 1); summitOpen = false; Sound.music("game"); };
       const entry = { onBack: () => { close(); pop(); } };
       overlays.push(entry);
-      $("[data-again]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); streak = 0; scene.set(0); paintRing(false); nextQuestion(); });
+      $("[data-again]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); streak = 0; run = 0; scene.set(0); paintRing(false); nextQuestion(); });
       $("[data-menu]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); pop(); });
       $("#overlay-root").appendChild(ov);
       $("[data-again]", ov).focus({ preventScroll: true });
@@ -726,7 +763,8 @@
     }
 
     $('[data-act="leave"]', el).addEventListener("click", () => { Sound.sfx("tap"); leave(); });
-    $("[data-next]", el).addEventListener("click", () => { Sound.sfx("tap"); nextQuestion(); });
+    // a fast double tap on "next" must not skip a question: only an answered question moves on
+    $("[data-next]", el).addEventListener("click", () => { if (!answered || summitOpen) return; Sound.sfx("tap"); nextQuestion(); });
 
     async function start() {
       if (started) return;
@@ -753,20 +791,30 @@
       el,
       onShow: start,
       onBack: leave,
-      destroy() { alive = false; setRage(false); scene.destroy(); clearTimeout(islandTimer); Sound.stop(); },
+      destroy() { alive = false; setRage(false); setGolden(false); scene.destroy(); clearTimeout(islandTimer); Sound.stop(); },
     };
   }
 
   /* ------------------------------------------------------------------ home: the courses and music tabs */
   const fmtTime = (s) => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
-  /** Album-style cover for a song: its colour, a record and its initials (no images needed). */
+  /** Album-style cover for a song, drawn from the game's own world (summit, crown, monster, stairs, flames). */
+  const COVER_ART = [
+    // summit: hills, the sun and the flag
+    `<circle cx="72" cy="30" r="12" fill="#FFE27A"/><path d="M0 100 L30 52 L48 74 L70 40 L100 82 V100Z" fill="rgba(0,0,0,.22)"/><path d="M0 100 L22 72 L40 88 L64 62 L100 96 V100Z" fill="rgba(0,0,0,.3)"/><path d="M70 40 V22" stroke="#fff" stroke-width="2"/><path d="M70 22 l12 4 -12 4Z" fill="#fff"/>`,
+    // the crown
+    `<path d="M24 66 L20 34 L38 50 L50 26 L62 50 L80 34 L76 66Z" fill="#FFD45C" stroke="#E08A00" stroke-width="3" stroke-linejoin="round"/><rect x="24" y="64" width="52" height="10" rx="3" fill="#FFB020"/><circle cx="50" cy="52" r="5" fill="#FF2D55"/>`,
+    // the monster, peeking
+    `<path d="M34 40 30 22 42 36Z M66 40 70 22 58 36Z" fill="#FFE27A"/><ellipse cx="50" cy="66" rx="30" ry="32" fill="rgba(255,255,255,.18)"/><ellipse cx="40" cy="58" rx="8" ry="9.5" fill="#fff"/><ellipse cx="60" cy="58" rx="8" ry="9.5" fill="#fff"/><circle cx="42" cy="60" r="3.6" fill="#2A1B3A"/><circle cx="62" cy="60" r="3.6" fill="#2A1B3A"/><path d="M40 76 Q50 86 60 76" fill="none" stroke="#2A1B3A" stroke-width="3.5" stroke-linecap="round"/>`,
+    // the stairs
+    `<path d="M14 86 H34 V70 H50 V54 H66 V38 H86 V86Z" fill="rgba(255,255,255,.28)"/><path d="M14 86 H34 V70 H50 V54 H66 V38 H86" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" opacity=".8"/><path d="M80 38 V20" stroke="#fff" stroke-width="2"/><path d="M80 20 l12 4 -12 4Z" fill="#FFE27A"/>`,
+  ];
+  const FIRE_ART = `<path d="M50 90 C26 84 22 60 36 44 C38 56 46 58 46 58 C42 40 50 22 64 12 C62 32 78 42 78 62 C78 80 66 90 50 90Z" fill="#FFB23A"/><path d="M50 90 C40 86 38 74 44 66 C45 72 50 74 50 74 C49 64 54 56 60 50 C60 62 68 68 66 78 C64 86 58 90 50 90Z" fill="#FFE27A"/>`;
   function cover(t, cls) {
-    const c = (t && t.color) || "#1DB954";
-    const words = String((t && t.title) || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(Boolean);
-    const ini = words.slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-    return `<span class="cover ${cls || ""}" style="--c:${c};--c2:${shade(c, -0.6)}" aria-hidden="true">
-      <svg viewBox="0 0 100 100"><circle cx="74" cy="80" r="46" fill="rgba(0,0,0,.3)"/><circle cx="74" cy="80" r="33" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5"/><circle cx="74" cy="80" r="21" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5"/><circle cx="74" cy="80" r="7" fill="rgba(255,255,255,.55)"/></svg>
-      <b dir="ltr">${esc(ini)}</b></span>`;
+    const c = (t && t.color) || "#6747D9", f = (t && t.file) || "";
+    const n = [...f].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+    const art = /final|hell|metal/i.test(f) ? FIRE_ART : COVER_ART[n % COVER_ART.length];
+    return `<span class="cover ${cls || ""}" style="--c:${c};--c2:${shade(c, -0.55)}" aria-hidden="true">
+      <svg class="art" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${art}</svg></span>`;
   }
   const eqBars = (on) => `<span class="eq-mini ${on ? "" : "still"}" aria-hidden="true"><i></i><i></i><i></i></span>`;
 
@@ -785,7 +833,7 @@
               <button class="ic" data-p-prev aria-label="השיר הקודם">${Icons.prev()}</button>
               <button class="big" data-p-play aria-label="נגינה"></button>
               <button class="ic" data-p-next aria-label="השיר הבא">${Icons.next()}</button>
-              <button class="ic small" data-p-music aria-label="מוזיקה ברקע"></button>
+              <span class="ic small" aria-hidden="true"></span>
             </div>
             <div class="np-note" data-np-note></div>
           </div>
@@ -800,7 +848,7 @@
         <p class="mt-foot">הבחירות נשמרות במכשיר הזה.</p>
       </div></div>`);
     const lib = Sound.library();
-    let visible = false, ticker = 0, lastKey = "";
+    let visible = false, ticker = 0, lastKey = "", lastList = "";
 
     function paintProgress() {
       const p = Sound.player();
@@ -815,7 +863,7 @@
       const p = Sound.player(), pr = Sound.prefs();
       const cur = p.file ? lib.find((t) => t.file === p.file) || p : lib.find((t) => t.file === pr.playlist[0]) || lib[0];
       const head = $("[data-head]", el);
-      head.style.setProperty("--hc", shade((cur && cur.color) || "#1DB954", -0.25));
+      head.style.setProperty("--hc", ((cur && cur.color) || "#6747D9") + "40");     // a soft tint of the song's colour
       // the big cover and titles only change with the song
       const key = (cur && cur.file) + "|" + p.final;
       if (key !== lastKey) {
@@ -829,13 +877,13 @@
       play.setAttribute("aria-label", p.playing ? "השהיה" : "נגינה");
       const sh = $("[data-p-shuffle]", el);
       sh.classList.toggle("on", p.shuffle); sh.setAttribute("aria-pressed", p.shuffle ? "true" : "false");
-      const mt = $("[data-p-music]", el);
-      mt.innerHTML = Icons.music(Store.music); mt.classList.toggle("on", Store.music);
-      mt.setAttribute("aria-pressed", Store.music ? "true" : "false");
-      mt.setAttribute("aria-label", Store.music ? "כיבוי מוזיקה ברקע" : "הפעלת מוזיקה ברקע");
+
       $("[data-np-note]", el).textContent = p.final ? "המדרגה האחרונה מתנגנת עכשיו" : !p.on ? "המוזיקה כבויה – נגיעה בנגינה מפעילה אותה" : "";
       paintProgress();
 
+      const listKey = JSON.stringify([pr, p.file, p.final, p.playing]);
+      if (listKey === lastList) return;
+      lastList = listKey;
       const inPl = new Set(pr.playlist);
       $("[data-count]", el).textContent = `· ${inPl.size}`;
       const order = pr.playlist.map((f) => lib.find((t) => t.file === f)).filter(Boolean).concat(lib.filter((t) => !inPl.has(t.file)));
@@ -882,9 +930,10 @@
       }
     });
 
-    Sound.onChange(() => { if (visible) paint(); });
+    const off = Sound.onChange(() => { if (visible) paint(); });
     return {
       el,
+      destroy() { visible = false; clearInterval(ticker); off(); },
       show() {
         visible = true; paint(); clearInterval(ticker); ticker = setInterval(paintProgress, 500);
         // bring the chosen summit / last-stair song into view in its row
@@ -915,8 +964,7 @@
     let tab = "courses", miniTick = 0;
 
     function bars() {
-      if (tab === "music") { try { if (window.AndroidBridge && window.AndroidBridge.setSystemBars) window.AndroidBridge.setSystemBars("#121212", false); } catch (e) { /* no bridge */ } }
-      else Theme.apply();
+      Theme.apply();      // the music tab uses the theme's own surfaces now
     }
     function setTab(t) {
       if (t === tab) return;
@@ -956,50 +1004,178 @@
       if (e.target.closest("[data-mini-play]")) { haptic("tap"); Sound.toggle(); return; }
       Sound.sfx("tap"); setTab("music");
     });
-    Sound.onChange(paintMini);
+    const offMini = Sound.onChange(paintMini);
     miniTick = setInterval(() => { if (tab === "courses" && !mini.hidden && el.isConnected) miniProgress(); }, 1000);
 
     return {
       el,
       onShow() { courses.onShow(); paintMini(); bars(); },
+      destroy() { clearInterval(miniTick); offMini(); musicTab.destroy(); if (courses.destroy) courses.destroy(); },
       /** Android Back on the first screen: from the music tab, back to the courses; from the courses, exit. */
       onRootBack() { if (tab === "music") { setTab("courses"); return "handled"; } return "exit"; },
       setTab,
     };
   }
 
-  /* ------------------------------------------------------------------ the first screen: pick a mode */
+  /* ------------------------------------------------------------------ the start screen
+     The loading screen (index.html #splash) turns into the start screen: its sky card shrinks to the top, the monster
+     takes the crown and says the line of the day, and the two modes rise below. The last-used mode is the big card.
+     The same screen opens again from the "מצב" pill on the courses screen. */
   const MODES = {
-    boring: { title: "משעמם", sub: "בלי מוזיקה ובלי מצב גיהנום, רק שאלות" },
-    cool: { title: "למגניבים בלבד", sub: "מוזיקה, קונפטי, ובמדרגה 19 – גיהנום אמיתי" },
+    boring: { title: "משעמם", sub: "בשקט: בלי מוזיקה ובלי גיהנום", icon: "quiet" },
+    cool: { title: "למגניבים בלבד", sub: "מוזיקה, קונפטי ומטאל במדרגה 19", icon: "loud" },
   };
-  const MODE_ART = {
-    boring: `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="22" fill="#C9CED8"/><path d="M21 33q4 3 8 0M35 33q4 3 8 0" fill="none" stroke="#5B6170" stroke-width="2.6" stroke-linecap="round"/><path d="M26 44h12" stroke="#5B6170" stroke-width="2.6" stroke-linecap="round"/><path d="M44 8h8l-8 9h8M52 20h5l-5 6h5" fill="none" stroke="#8A90A0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    cool: `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 22C6 18 4 8 7 2c3 7 8 11 14 13zM50 22c8-4 10-14 7-20-3 7-8 11-14 13z" fill="#7A0F00"/><circle cx="32" cy="34" r="22" fill="#FFB020"/><path d="M12 28h40l-2 8a6 6 0 0 1-6 5h-6a5 5 0 0 1-5-4l-1-3-1 3a5 5 0 0 1-5 4h-6a6 6 0 0 1-6-5z" fill="#14141A"/><path d="M17 31h8M39 31h8" stroke="#5AD8FF" stroke-width="1.6" stroke-linecap="round" opacity=".8"/><path d="M24 47q8 6 16 0" fill="none" stroke="#7A2A00" stroke-width="2.8" stroke-linecap="round"/></svg>`,
-  };
+  const SHADES = `<path d="M33 58h54l-3 12a7 7 0 0 1-6.8 5.4h-9.4a6 6 0 0 1-5.8-4.4l-2-6-2 6a6 6 0 0 1-5.8 4.4h-9.4A7 7 0 0 1 36 70z" fill="#14141A"/><path d="M40 62h10M66 62h10" stroke="#5AD8FF" stroke-width="2" stroke-linecap="round" opacity=".8"/>`;
+  const SPECS_BOOK = `<g fill="none" stroke="#3B2C7A" stroke-width="3"><circle cx="48" cy="68" r="12"/><circle cx="72" cy="68" r="12"/><path d="M58 68h4"/></g><path d="M30 98q30-10 60 0v20q-30-9-60 0z" fill="#FFF6E6" stroke="#C9A36B" stroke-width="2"/><path d="M60 92v24" stroke="#C9A36B" stroke-width="2"/>`;
+  const modeArt = (m) => Scene.monsterSvg(Theme.current, "happy", "", m === "cool" ? SHADES : SPECS_BOOK);
 
-  function modeScreen() {
-    const last = Store.mode;
-    const card = (m) => `<button class="mode-card ${m}" data-mode="${m}">
+  const SPEAKER = {
+    quiet: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5h3l4-3.5v12l-4-3.5H3z" fill="currentColor"/><path d="M13.5 7.5l4.5 5M18 7.5l-4.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    loud: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7.5h3l4-3.5v12l-4-3.5H2z" fill="currentColor"/><path d="M12 6.5q2.5 3.5 0 7M14.6 4.5q4.2 5.5 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  };
+  /** The monster's line of the day (picked by date, so it changes every day and needs no upkeep). */
+  const LINES = [
+    "היום עולים לפסגה. ביחד.", "עוד 20 תשובות ואני עם כתר", "כל תשובה נכונה = מדרגה. בואי נטפס", "קפה? בדוק. מוח? בדוק. יאללה",
+    "המבחן לא יודע מה מחכה לו", "טעות היא רק מדרגה אחת אחורה", "אם תגיעי ל־20 אני רוקד", "אני מוכן. את מוכנה?",
+    "שאלה אחת. ואז עוד אחת. ואז פסגה.", "אדריכלות? תרבות? הכול אצלך בכיס", "זה היום שלך", "הכתר הזה מחכה לך",
+    "בואי נשבור את השיא", "אני שומר לך את הכתר חם", "את ואני = פסגה", "המדרגות לא יטפסו את עצמן",
+    "עוד ניצחון קטן אחד?", "היום אני לא נופל. נכון?", "מי שעונה נכון מקבל קונפטי", "רק חמש דקות. אוקיי, עשר.",
+    "יש לי הרגשה של 20 ברצף", "בואי נעשה את זה מהר ויפה", "אני פה. את פה. מתחילים", "כל פסגה מתחילה במדרגה אחת",
+    "המוח שלך מחמם מנועים", "אני כבר עומד על המדרגה הראשונה", "תני לי לנצח היום, בבקשה?", "לימוד קטן, קפיצה גדולה",
+    "עוד יום, עוד פסגה", "את יותר חכמה ממה שאת חושבת",
+  ];
+  const lineOfDay = () => { const d = new Date(); return LINES[(d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate()) % LINES.length]; };
+
+  function myStats() {
+    let best = 0, summits = 0;
+    for (const c of Data.courses) {
+      best = Math.max(best, Store.bestForCourse(c.id));
+      for (const src of ["real", "generated", "mixed"]) summits += Store.sourceStats(c.id, src).summits;
+    }
+    return { best, summits };
+  }
+
+  let SPLASH_CARD = "";       // the sky card's markup, kept to rebuild the start screen from the "מצב" pill
+  let start = null;           // the open start screen: { el, boot }
+
+  /** Turns `sp` (the loading screen, or a fresh copy of it) into the start screen. */
+  function startScreen(sp, boot) {
+    const last = Store.mode, other = last === "cool" ? "boring" : "cool";
+    const hero = sp.querySelector(".sp-hero > g");
+    if (hero && !hero.querySelector(".sp-shades")) {
+      hero.insertAdjacentHTML("beforeend", `<g class="sp-shades"><path d="M33 58h54l-3 12a7 7 0 0 1-6.8 5.4h-9.4a6 6 0 0 1-5.8-4.4l-2-6-2 6a6 6 0 0 1-5.8 4.4h-9.4A7 7 0 0 1 36 70z" fill="#14141A"/><path d="M40 62h10M66 62h10" stroke="#5AD8FF" stroke-width="2" stroke-linecap="round" opacity=".8"/></g>
+        <g class="sp-specs" fill="none" stroke="#3B2C7A" stroke-width="3"><circle cx="48" cy="68" r="12"/><circle cx="72" cy="68" r="12"/><path d="M58 68h4"/></g>`);
+    }
+    const { best, summits } = myStats();
+    const card = (m, primary) => `<button class="mode-card ${m} ${primary ? "primary" : "secondary"}" data-mode="${m}">
         ${m === "cool" ? '<span class="mode-fire" aria-hidden="true"></span>' : ""}
-        <span class="mode-ic">${MODE_ART[m]}</span>
-        <span class="mode-txt"><b>${MODES[m].title}</b><span>${MODES[m].sub}</span></span>
-        ${last === m ? '<span class="mode-last">בפעם הקודמת</span>' : ""}
+        <span class="mode-ic">${modeArt(m)}</span>
+        <span class="mode-txt"><b>${MODES[m].title}</b><span class="mode-sub">${SPEAKER[MODES[m].icon]}${MODES[m].sub}</span></span>
+        ${primary ? `<span class="mode-go" aria-hidden="true">${Icons.play()}</span>` : ""}
       </button>`;
-    const el = h(`<section data-screen="mode" class="mode-screen">
-      <div class="mode-wrap">
-        <div class="mode-art" aria-hidden="true">${Art.banner(Theme.current)}</div>
-        <h1 class="mode-title"><bdi dir="ltr">The Road To 100</bdi></h1>
-        <p class="mode-q">איך משחקים היום?</p>
-        ${card("boring")}${card("cool")}
-      </div></section>`);
-    $$(".mode-card", el).forEach((b) => b.addEventListener("click", () => {
-      Store.mode = b.dataset.mode;
-      Sound.unlock(); Sound.sfx("tap"); haptic("success");
-      Sound.refresh();
-      resetRoot(homeScreen());
+    const ui = h(`<div class="start-ui">
+        <div class="start-stats">${best ? `${Icons.flame()}<span>שיא ${best} ברצף</span><i></i><span>${summits === 1 ? "פסגה אחת" : `${summits} פסגות`}</span>` : `${Icons.flame()}<span>עוד אין שיא – זה הזמן</span>`}</div>
+        <div class="start-spacer"></div>
+        <p class="start-q">איך משחקים היום?</p>
+        <button class="diff-ctl" data-diff aria-haspopup="dialog"></button>
+        ${card(last, true)}${card(other, false)}
+      </div>`);
+    const bubble = h(`<div class="start-bubble" role="note"><span>${esc(lineOfDay())}</span></div>`);
+    sp.querySelector(".sp-card").appendChild(bubble);
+    sp.appendChild(ui);
+    sp.setAttribute("role", "dialog");
+    sp.setAttribute("aria-label", "איך משחקים היום?");
+    sp.dataset.screen = "mode";
+
+    // the card and the title glide from their loading positions to the top (FLIP), the rest rises in
+    const moving = [sp.querySelector(".sp-card"), sp.querySelector("h1")].filter(Boolean);
+    const first = moving.map((e) => e.getBoundingClientRect());
+    const svg = sp.querySelector(".sp-card svg");
+    if (svg) svg.setAttribute("preserveAspectRatio", "xMidYMax slice");   // the card is wider than the art: crop the sky, keep the stairs
+    sp.classList.add("ready");
+    if (boot && !reduced()) {
+      moving.forEach((e, i) => {
+        const r = e.getBoundingClientRect(), f = first[i];
+        e.style.transition = "none";
+        e.style.transform = `translate(${f.left - r.left}px, ${f.top - r.top}px) scale(${f.width / r.width})`;
+        e.style.transformOrigin = "0 0";
+        void e.offsetWidth;
+        e.style.transition = "transform 360ms cubic-bezier(.22, 1, .36, 1)";
+        e.style.transform = "";
+      });
+    }
+    if (!boot) sp.classList.add("instant");
+
+    $$(".mode-card", sp).forEach((b) => b.addEventListener("click", () => pickMode(b.dataset.mode, b)));
+    const diff = $("[data-diff]", sp);
+    const paintDiff = () => {
+      const c = Store.difficulty === "casual";
+      diff.innerHTML = `${c ? Icons.flagSave() : Icons.stairsDown()}<span>${c ? "עם נקודות שמירה" : "נפילה להתחלה"}</span><i>שינוי</i>`;
+      diff.setAttribute("aria-label", `קושי: ${c ? "עם נקודות שמירה" : "נפילה להתחלה"}. שינוי`);
+    };
+    paintDiff();
+    diff.addEventListener("click", () => { Sound.unlock(); Sound.sfx("tap"); haptic("tap"); difficultySheet(paintDiff); });
+    document.documentElement.dataset.mode = Store.mode;
+    start = { el: sp, boot };
+    Sound.music(null);          // no music before she picks (the loud mode might be the wrong one right now)
+  }
+
+  const DIFFS = [
+    { id: "casual", name: "עם נקודות שמירה", tag: "קז׳ואל", sub: "טעות מחזירה לנקודת השמירה האחרונה: 5, 10 או 15" },
+    { id: "hardcore", name: "נפילה להתחלה", tag: "הארדקור", sub: "כל טעות מחזירה למדרגה 0. רק 20 ברצף מגיעים לפסגה" },
+  ];
+  function difficultySheet(onDone) {
+    const layer = h(`<div class="dim-layer sheet-layer on-top" role="dialog" aria-modal="true" aria-labelledby="df-t">
+      <div class="sheet"><div class="grabber"></div><h2 id="df-t">מה קורה כשטועים?</h2><p>חל מהטיפוס הבא.</p>
+        <div class="diff-list" role="radiogroup">${DIFFS.map((d) => `<button class="diff-row" role="radio" data-d="${d.id}" aria-checked="${Store.difficulty === d.id}">
+          <span class="diff-radio" aria-hidden="true"></span><span class="diff-txt"><b>${d.name}</b><small>${d.sub}</small></span><span class="diff-tag">${d.tag}</span></button>`).join("")}</div></div></div>`);
+    const close = () => { layer.remove(); const i = overlays.indexOf(entry); if (i >= 0) overlays.splice(i, 1); };
+    const entry = { onBack: close };
+    overlays.push(entry);
+    layer.addEventListener("click", (e) => { if (e.target === layer) { Sound.sfx("tap"); close(); } });
+    $$(".diff-row", layer).forEach((b) => b.addEventListener("click", () => {
+      Store.difficulty = b.dataset.d;
+      Sound.sfx("tap"); haptic("success");
+      $$(".diff-row", layer).forEach((x) => x.setAttribute("aria-checked", x === b ? "true" : "false"));
+      if (onDone) onDone();
+      setTimeout(close, 160);
     }));
-    return { el };
+    document.body.appendChild(layer);
+    const cur = $('.diff-row[aria-checked="true"]', layer);
+    if (cur) cur.focus({ preventScroll: true });
+  }
+
+  async function pickMode(mode, btn) {
+    if (!start || start.picking) return;
+    start.picking = true;
+    const sp = start.el;
+    Store.mode = mode;
+    document.documentElement.dataset.mode = mode;
+    Sound.unlock(); Sound.sfx("tap"); haptic("success");
+    btn.classList.add("is-picked");
+    sp.classList.add(mode === "cool" ? "react-cool" : "react-boring");     // shades on, or reading glasses on
+    await wait(reduced() ? 0 : 320);
+    start = null;                       // closed: the home screen's music may start now
+    Sound.refresh();
+    await resetRoot(homeScreen());
+    sp.classList.add("out");
+    setTimeout(() => { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 400);
+  }
+
+  /** The "מצב" pill: the start screen again, on top of the courses. Back closes it. */
+  function openStart() {
+    if (start || !SPLASH_CARD) return;
+    const sp = h(`<div id="splash">${SPLASH_CARD}<h1><bdi dir="ltr">The Road To 100</bdi></h1></div>`);
+    document.body.appendChild(sp);
+    startScreen(sp, false);
+  }
+  function closeStart() {
+    if (!start || start.boot) return;
+    const sp = start.el;
+    start = null;
+    sp.classList.add("out");
+    setTimeout(() => { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 400);
+    syncMusic();
   }
 
   /** Replace the whole stack with one screen (no slide). */
@@ -1015,23 +1191,14 @@
   }
 
   /* ------------------------------------------------------------------ boot */
-  /** The loading screen in index.html: shown at least 1.2 s from launch, then it fades out. */
-  async function finishLoading() {
-    const sp = document.getElementById("splash");
-    if (!sp) return;
-    const left = 1200 - performance.now();
-    if (left > 0 && !reduced()) await wait(left);
-    sp.classList.add("out");
-    setTimeout(() => { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 400);
-  }
-
   async function boot() {
     try {
       await Promise.all([Data.load(), Sound.init(), document.fonts ? document.fonts.ready : null]);
-      stackEl.classList.add("no-anim");
-      await push(modeScreen());
-      requestAnimationFrame(() => stackEl.classList.remove("no-anim"));
-      finishLoading();
+      const sp = document.getElementById("splash");
+      const cardEl = sp && sp.querySelector(".sp-card");
+      SPLASH_CARD = cardEl ? cardEl.outerHTML : "";
+      if (sp) startScreen(sp, true);
+      else await resetRoot(homeScreen());
     } catch (e) {
       const cap = document.querySelector("[data-splash-cap]");
       if (cap) cap.textContent = `לא הצלחתי לטעון את הקורסים. (${e.message})`;

@@ -10,7 +10,7 @@
 (function () {
   const SCENES = ["menu", "game", "summit"];
   const MUSIC_VOL = 0.35;   // default track volume (a track can set its own "volume", 0..1)
-  const DUCK = 0.25;        // music volume factor while a clip plays
+  const DUCK = 0.63;        // music under a sound effect or clip: -4 dB
   const FADE_MS = 700;
   let ctx = null;
   let master = null;
@@ -19,6 +19,7 @@
   let active = [];      // scheduled nodes of the current clip
   let activeEl = null;  // <audio> element of the current file clip
   let stopTimer = null;
+  let foreground = true;   // false between Sound.pause() and Sound.resume() (the app is in the background)
 
   function ensureCtx() {
     if (ctx) { if (ctx.state === "suspended") ctx.resume().catch(() => {}); return ctx; }
@@ -47,6 +48,7 @@
     o.connect(g); g.connect(dest || master);
     o.start(start); o.stop(start + dur + 0.05);
     active.push(o);
+    o.onended = () => { const i = active.indexOf(o); if (i >= 0) active.splice(i, 1); try { o.disconnect(); g.disconnect(); } catch (e) { /* ignore */ } };
     return o;
   }
 
@@ -220,7 +222,11 @@
     const list = music.tracks[scene] || [];
     if ((!list.length && !pick) || final.on) return;
     let t = pick;
-    if (!t) { const i = at != null ? at : nextIndex(list); music.index[scene] = i; t = list[i]; }
+    if (!t) {
+      const i = at != null ? at : nextIndex(list);
+      if (at != null) { const bag = music.bags[list.map((x) => x.file).join("|")]; if (bag) { const k = bag.indexOf(at); if (k >= 0) bag.splice(k, 1); } }
+      music.index[scene] = i; t = list[i];
+    }
     if (music.track && music.track.file !== t.file) { music.history.push(music.track.file); if (music.history.length > 30) music.history.shift(); }
     music.lastFile = t.file;
     const el = mkAudio(t.file, "music");
@@ -235,7 +241,12 @@
       if (nowList.length === 1 && nowList[0].loop === false) { music.track = null; music.played = now; notify(); return; }   // one-shot: done
       if (now && canPlay()) startTrack(now); else notify();
     });
-    el.addEventListener("error", () => { if (music.el === el) { music.el = null; music.track = null; notify(); } });
+    el.addEventListener("error", () => {
+      if (music.el !== el) { dropEl(el); return; }
+      dropEl(el); music.el = null; music.track = null;
+      const now = music.scene, nowList = music.tracks[now] || [];
+      if (now && canPlay() && nowList.length > 1) setTimeout(() => { if (music.scene === now && !music.el) startTrack(now); }, 300); else notify();
+    });
     el.addEventListener("play", notify);
     el.addEventListener("pause", notify);
     music.el = el; music.track = t;
@@ -268,9 +279,9 @@
 
   function duck(ms) {
     if (!music.el) return;
-    music.ducked = true; fadeTo(music.el, target(), 250);
+    music.ducked = true; fadeTo(music.el, target(), 30);
     clearTimeout(music.duckTimer);
-    music.duckTimer = setTimeout(() => { music.ducked = false; if (music.el && !music.userPaused) fadeTo(music.el, target(), 600); }, ms);
+    music.duckTimer = setTimeout(() => { music.ducked = false; if (music.el && !music.userPaused) fadeTo(music.el, target(), 220); }, ms);
   }
 
   /** App in the background: silence every element this module made (songs still fading out are dropped outright). */
@@ -283,6 +294,7 @@
   }
 
   function resumeMusic() {
+    if (!foreground) return;          // settings or player taps while in the background wait for resume()
     music.paused = false;
     if (final.on) { finalPlay(); return; }
     if (!musicOn() || music.userPaused || !music.scene || music.played === music.scene) return;
@@ -301,7 +313,7 @@
     for (const n of active) { try { n.stop(); } catch (e) { /* already stopped */ } }
     active = [];
     if (master && ctx) { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setValueAtTime(0.55, ctx.currentTime); }
-    if (activeEl) { try { activeEl.pause(); } catch (e) { /* ignore */ } activeEl = null; }
+    if (activeEl) { dropEl(activeEl); activeEl = null; }
   }
 
   /** The music tab's play button also switches music (and sound) on: pressing play means "I want music". */
@@ -412,8 +424,16 @@
     /** Called when sound or music is switched on/off. */
     refresh() { if (final.on) return; if (musicOn()) resumeMusic(); else stopMusic(); },
     /** App went to the background / came back (also called from MainActivity.onPause/onResume). */
-    pause() { stopAll(); pauseMusic(); },
-    resume() { resumeMusic(); },
+    pause() {
+      foreground = false;
+      stopAll(); pauseMusic();
+      if (ctx && ctx.state === "running") ctx.suspend().catch(() => {});
+    },
+    resume() {
+      foreground = true;
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+      resumeMusic();
+    },
     /** The last-stair track: on = play it (even when sound is off), off = back to the background song.
         Returns false when the manifest has no "final" track. */
     final(on) { return on ? finalStart() : (finalStop(), !!final.cfg); },
@@ -454,8 +474,8 @@
       const c = ensureCtx();
       if (!c) return;
       const t = c.currentTime + 0.01;
-      if (kind === "correct") { tone(hz(84), t, 0.12, "sine", 0.25); tone(hz(88), t + 0.08, 0.18, "sine", 0.22); tone(hz(91), t + 0.16, 0.3, "sine", 0.2); }
-      else if (kind === "wrong") { tone(hz(52), t, 0.22, "square", 0.08); tone(hz(47), t + 0.14, 0.35, "square", 0.07); }
+      if (kind === "correct") { tone(hz(84), t, 0.07, "sine", 0.24); tone(hz(88), t + 0.05, 0.08, "sine", 0.22); tone(hz(91), t + 0.1, 0.1, "sine", 0.2); }
+      else if (kind === "wrong") { tone(hz(52), t, 0.06, "triangle", 0.12); tone(hz(47), t + 0.05, 0.07, "triangle", 0.1); }
       else if (kind === "tap") { tone(hz(96), t, 0.04, "sine", 0.06); }
       else if (kind === "fall") { const o = ctx.createOscillator(); const g = ctx.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(700, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.6); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.7); }
     },

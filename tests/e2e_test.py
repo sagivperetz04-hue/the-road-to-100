@@ -112,7 +112,10 @@ class Session:
         await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
         qid = await page.get_attribute("[data-card]", "data-qid")
         right = self.answers[qid]
-        texts = await page.locator("[data-card] .opt .opt-text").all_inner_texts()
+        # arrows are glued to their neighbours with no-break spaces on screen
+        norm = lambda t: " ".join(t.replace(" ", " ").split())
+        texts = [norm(t) for t in await page.locator("[data-card] .opt .opt-text").all_inner_texts()]
+        right = norm(right)
         idx = texts.index(right) if correct else next(i for i, t in enumerate(texts) if t != right)
         await page.locator("[data-card] .opt").nth(idx).click()
         return qid
@@ -139,11 +142,14 @@ class Session:
         return seen
 
 
-async def enter(page, mode="cool"):
-    """The app opens on the mode screen: pick a mode (default: the full game) and wait for the courses."""
+async def enter(page, mode="cool", difficulty="hardcore"):
+    """The app opens on the start screen: pick a mode (default: the full game) and wait for the courses.
+    The flows below assume hardcore (a wrong answer goes back to stair 0); casual has its own checks."""
     await page.wait_for_selector(".mode-card, .course-row")
+    await page.evaluate(f"Store.difficulty = '{difficulty}'")
     if await page.locator(".mode-card").count():
         await page.click(f'.mode-card[data-mode="{mode}"]')
+    await page.wait_for_selector("#splash", state="detached")   # the start screen has handed over to the courses
     await page.wait_for_selector(".course-row")
 
 
@@ -491,7 +497,7 @@ async def run(chrome, shots):
         await wait_music("m.scene === 'game' && m.playing && m.file === 'game1.wav'", "game music takes over in the game")
         for _ in range(5):
             await s.answer(True); await s.next()
-        await wait_music("m.ducked && m.volume < 0.2", "music ducks under the 5-step clip")
+        await wait_music("m.ducked && m.volume < 0.3", "music ducks (-4 dB) under the 5-step clip")
         await wait_music("!m.ducked && m.volume > 0.3", "music comes back after the clip", timeout=9000)
         await page.evaluate("Sound.pause()")
         await wait_music("!m.playing", "Sound.pause() (app in background) pauses the music")
@@ -516,7 +522,7 @@ async def run(chrome, shots):
                 await s.next()
         await page.wait_for_selector(".game.rage .rage-fx", timeout=3000)
         check(True, "stair 19 turns on hell mode (red, flames)")
-        check(await page.locator(".rage-fx .flame").count() >= 12 and await page.locator(".rage-fx .pike").count() == 2, "hell mode draws flames and skulls")
+        check(await page.locator(".rage-fx .flame").count() >= 12 and await page.locator(".rage-fx .demon").count() == 1 and await page.locator(".rage-fx .lava").count() == 1, "hell mode draws flames, one skull landmark and a lava edge (inside the scene)")
         check(await page.locator(".game .slam").count() == 1, "hell mode slams its 'שלב אחרון' banner")
         try:
             await page.wait_for_function("(() => { const f = Sound.finalState(); return f.on && f.playing; })()", timeout=5000)
@@ -593,9 +599,11 @@ async def run(chrome, shots):
 
         # the boring mode: no music at all and no hell mode on stair 19
         await page.click('[data-act="mode"]'); await page.wait_for_selector(".mode-card")
+        check(await page.get_attribute(".mode-card.primary", "data-mode") == "cool", "the start screen makes the last-used mode the big card")
+        check(await page.locator(".start-bubble").count() == 1, "the monster says the line of the day")
         await shot_page(page, shots, "mode-screen")
         await wait_music("!m.playing", "no music on the mode screen")
-        await page.click('.mode-card[data-mode="boring"]'); await page.wait_for_selector(".course-row")
+        await page.click('.mode-card[data-mode="boring"]'); await page.wait_for_selector("#splash", state="detached")
         check(await page.locator('[data-tab-btn="music"]').is_hidden() and await page.locator('[data-act="music"]').count() == 0, "boring mode hides the music tab and toggle")
         await page.click('.course-row >> nth=0'); await s.wait_screen("topics")
         await page.click("[data-go]"); await s.wait_screen("source")
@@ -608,6 +616,39 @@ async def run(chrome, shots):
         await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
         await s.wait_screen("source")
         await page.evaluate("Store.mode = 'cool'")
+
+        # rapid input: a double tap on "next" moves on exactly one question
+        await page.click('.src-card[data-src="generated"]') if await s.screen() == "source" else None
+        await s.wait_screen("game")
+        q0 = await s.answer(True)
+        await page.wait_for_selector("[data-foot].show")
+        changes = await page.evaluate("""() => new Promise((done) => {
+          const card = document.querySelector('[data-card]'); let n = 0;
+          const mo = new MutationObserver((m) => { n += m.filter((x) => x.attributeName === 'data-qid').length; });
+          mo.observe(card, { attributes: true });
+          const b = document.querySelector('[data-next]'); b.click(); b.click();
+          setTimeout(() => { mo.disconnect(); done(n); }, 300);
+        })""")
+        q1 = await page.get_attribute("[data-card]", "data-qid")
+        check(changes == 1 and q1 != q0 and await page.locator("[data-card] .opt:not([disabled])").count() == 4,
+              f"a double tap on 'next' moves on exactly one question ({changes} change(s))")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await s.wait_screen("source")
+
+        # casual: checkpoints at 5, 10, 15; a wrong answer falls back to the last one
+        await page.evaluate("Store.difficulty = 'casual'")
+        await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+        for _ in range(7):
+            await s.answer(True); await s.next()
+        flags = await page.evaluate("[...document.querySelectorAll('[data-scene] .checkpoint')].map(f => f.getAttribute('class'))")
+        check(len(flags) == 3 and sum("current" in f for f in flags) == 1, f"casual: three checkpoint flags, the one at stair 5 open ({flags})")
+        await s.answer(False)
+        await page.wait_for_timeout(1600)
+        check(await page.inner_text("[data-num]") == "5", "casual: a wrong answer at stair 7 falls back to the checkpoint at 5")
+        check_feet(await ground_report(page), 5, "casual: after the fall")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await s.wait_screen("source")
+        await page.evaluate("Store.difficulty = 'hardcore'")
         check(not s.problems, "music: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
         await ctx.close()
         mhttpd.shutdown()

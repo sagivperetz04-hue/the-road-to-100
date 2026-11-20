@@ -9,6 +9,9 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -42,6 +45,31 @@ public class MainActivity extends Activity {
     /** A repeating vibration the page asked for (the last stair); stopped in the background, restarted on return. */
     private long[] rumble;
     private int rumbleRepeat = -1;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean resumed = false;
+    /** Android 11+: the stair-19 heartbeat as two crisp "thud" primitives, every 1.1 s (no buzzy waveform). */
+    private final Runnable heartbeat = new Runnable() {
+        @Override public void run() {
+            Vibrator v = vibrator();
+            if (v == null || rumble == null || !resumed || !hapticsOn() || Build.VERSION.SDK_INT < 31) return;
+            v.vibrate(VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, 1f)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, .55f, 140)
+                .compose());
+            handler.postDelayed(this, 1100);
+        }
+    };
+
+    private boolean thudSupported(Vibrator v) {
+        return Build.VERSION.SDK_INT >= 31 && v != null && v.hasVibrator()
+            && v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_THUD, VibrationEffect.Composition.PRIMITIVE_QUICK_RISE);
+    }
+
+    /** The user's "touch feedback" setting also covers our own effects. */
+    private boolean hapticsOn() {
+        try { return Settings.System.getInt(getContentResolver(), Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0; }
+        catch (Exception e) { return true; }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,11 +107,8 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new AssetClient());
         setContentView(web);
 
-        if (savedInstanceState != null) {
-            web.restoreState(savedInstanceState);
-        } else {
-            web.loadUrl(START_URL);
-        }
+        // a restored WebView doesn't bring back the live game state; when nothing comes back, start fresh
+        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl(START_URL);
     }
 
     private void styleSystemBars() {
@@ -123,8 +148,18 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     private void startVibration(long[] timings, int repeat) {
         Vibrator v = vibrator();
-        if (v == null || !v.hasVibrator()) return;
+        if (v == null || !v.hasVibrator() || !resumed || !hapticsOn()) return;
+        handler.removeCallbacks(heartbeat);
         v.cancel();
+        if (repeat >= 0 && thudSupported(v)) {
+            // a rising rumble, then the heartbeat loop
+            v.vibrate(VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_RISE, 1f)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, 1f, 60)
+                .compose());
+            handler.postDelayed(heartbeat, 700);
+            return;
+        }
         if (Build.VERSION.SDK_INT >= 26) {
             int[] amps = new int[timings.length];
             for (int i = 0; i < amps.length; i++) amps[i] = i % 2 == 0 ? 0 : 255;   // even = pause, odd = full strength
@@ -135,12 +170,14 @@ public class MainActivity extends Activity {
     }
 
     private void stopVibration() {
+        handler.removeCallbacks(heartbeat);
         Vibrator v = vibrator();
         if (v != null) v.cancel();
     }
 
     @Override
     protected void onPause() {
+        resumed = false;
         stopVibration();
         if (web != null) {
             web.evaluateJavascript("window.Sound && (window.Sound.pause ? window.Sound.pause() : window.Sound.stop())", null);
@@ -152,6 +189,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         if (web != null) {
             web.onResume();
             web.evaluateJavascript("window.Sound && window.Sound.resume && window.Sound.resume()", null);
@@ -167,6 +205,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         if (web != null) {
             web.destroy();
             web = null;
@@ -193,14 +232,24 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Semantic system haptics: tap, success (CONFIRM), error (REJECT), heavy (a milestone). */
         @JavascriptInterface
         public void haptic(final String kind) {
             runOnUiThread(() -> {
                 if (web == null) return;
+                if ("heavy".equals(kind)) {
+                    Vibrator v = vibrator();
+                    if (Build.VERSION.SDK_INT >= 29 && v != null && v.hasVibrator()) {
+                        if (hapticsOn()) v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK));
+                        return;
+                    }
+                    web.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    return;
+                }
                 int c;
                 if ("success".equals(kind)) c = Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY;
                 else if ("error".equals(kind)) c = Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS;
-                else c = HapticFeedbackConstants.KEYBOARD_TAP;
+                else c = HapticFeedbackConstants.VIRTUAL_KEY;
                 web.performHapticFeedback(c);
             });
         }
