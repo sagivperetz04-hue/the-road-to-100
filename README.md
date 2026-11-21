@@ -115,8 +115,14 @@ On Windows, run it from Git Bash (`ANDROID_HOME=/c/Android/sdk bash tools/build.
 `d8.bat`/`apksigner.bat`, needs no `zip`, and uses `.venv` (with Playwright) for Python when it exists. Keep the
 project and the SDK in folders whose paths are English letters only.
 
-To install over an older build, sign with the same keystore (`KEYSTORE`, `KS_PASS`, `KEY_ALIAS`, `KEY_PASS`)
-and keep the same application id (`APP_ID`, default `com.plap.studystairs`).
+To install over an older build, sign with the same keystore and keep the same application id (`APP_ID`, default
+`com.plap.studystairs`). The signing key is **not in git**: put `keystore/madregot-release.jks` in place and either
+set `KS_PASS` / `KEY_ALIAS` / `KEY_PASS` or create `keystore/signing.properties` with those three lines
+(`keystore/` is git-ignored).
+
+**Not in git either: the music.** The songs and the "Fahh" effect listed in `app/assets/audio/manifest.json` are
+copyrighted, so `app/assets/audio/music/` and `app/assets/audio/sfx/` are git-ignored. Put your own files there
+(same names, or edit the manifest) before building; `validate_data.py` lists anything missing.
 
 ## Progress
 

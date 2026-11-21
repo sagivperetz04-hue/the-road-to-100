@@ -2,3 +2,10 @@
 build/
 .idea/
 *.iml
+
+# never in git: the release signing key and its password file
+keystore/
+*.jks
+# never in git: copyrighted audio (kept locally for builds)
+app/assets/audio/music/
+app/assets/audio/sfx/

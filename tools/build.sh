@@ -45,7 +45,20 @@ tool() { for e in "" .exe .bat; do [ -f "$BT/$1$e" ] && { echo "$BT/$1$e"; retur
 [ -f "$ANDROID_JAR" ] || { echo "android.jar not found. Set ANDROID_HOME (needs platforms/android-XX)." >&2; exit 1; }
 
 KEYSTORE="${KEYSTORE:-$ROOT/keystore/madregot-release.jks}"
-KS_PASS="${KS_PASS:-}"
+# signing secrets: environment variables, else keystore/signing.properties (never committed; keystore/ is git-ignored)
+SIGNING_PROPS="${SIGNING_PROPS:-$ROOT/keystore/signing.properties}"
+if [ -f "$SIGNING_PROPS" ]; then
+  while IFS='=' read -r k v; do
+    v="${v%$'\r'}"
+    case "$k" in
+      KS_PASS) KS_PASS="${KS_PASS:-$v}" ;;
+      KEY_PASS) KEY_PASS="${KEY_PASS:-$v}" ;;
+      KEY_ALIAS) KEY_ALIAS="${KEY_ALIAS:-$v}" ;;
+    esac
+  done < "$SIGNING_PROPS"
+fi
+[ -n "${KS_PASS:-}" ] || { echo "No signing password: set KS_PASS or create $SIGNING_PROPS (KS_PASS=..., KEY_ALIAS=..., KEY_PASS=...)." >&2; exit 1; }
+[ -f "$KEYSTORE" ] || { echo "Keystore not found: $KEYSTORE (it is not in git; restore it from your backup)." >&2; exit 1; }
 KEY_ALIAS="${KEY_ALIAS:-madregot}"
 KEY_PASS="${KEY_PASS:-$KS_PASS}"
 APP_ID="${APP_ID:-com.plap.studystairs}"
