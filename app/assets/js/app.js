@@ -515,17 +515,42 @@
       const chain = (side) => `<svg class="chain ${side}" viewBox="0 0 20 200" aria-hidden="true">${Array.from({ length: 11 }, (_, k) =>
         k % 2 ? `<rect x="8" y="${k * 18}" width="4" height="22" rx="2" fill="#3B3B40" stroke="#16161A"/>`
               : `<ellipse cx="10" cy="${k * 18 + 10}" rx="6" ry="11" fill="none" stroke="#4A4A50" stroke-width="3.5"/>`).join("")}</svg>`;
-      const embers = Array.from({ length: 8 }, () => `<i class="ember" style="--x:${(Math.random() * 100).toFixed(1)}%;--d:${(2.4 + Math.random() * 2.6).toFixed(2)}s;--w:${(-Math.random() * 4).toFixed(2)}s;--dx:${(Math.random() * 60 - 30).toFixed(0)}px"></i>`).join("");
+      // a horned demon face: glowing eyes, fangs, a crack of fire for a mouth
+      const demonFace = (n2) => `<svg viewBox="0 0 120 110" aria-hidden="true"><defs>
+          <radialGradient id="dmF${n}${n2}" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#C8261A"/><stop offset=".7" stop-color="#7A0E08"/><stop offset="1" stop-color="#2E0402"/></radialGradient></defs>
+        <path d="M30 34C16 26 8 8 12-4c4 14 14 22 26 26zM90 34c14-8 22-26 18-38-4 14-14 22-26 26z" fill="#2A0A06" stroke="#0E0201" stroke-width="2"/>
+        <path d="M60 14C32 14 20 34 22 56c2 22 18 44 38 50 20-6 36-28 38-50 2-22-10-42-38-42z" fill="url(#dmF${n}${n2})" stroke="#0E0201" stroke-width="2.5"/>
+        <path d="M30 46l20 8M90 46l-20 8" stroke="#0E0201" stroke-width="5" stroke-linecap="round"/>
+        <path class="eye" d="M34 58q8-8 16 0q-8 5-16 0zM70 58q8-8 16 0q-8 5-16 0z" fill="#FFB000"/>
+        <path d="M40 80q20 12 40 0l-6 10-6-6-4 10-4-10-4 10-4-10-6 6z" fill="#FF6A00" stroke="#0E0201" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M44 82l4 9 3-8M76 82l-4 9-3-8" fill="#F4E9D6" stroke="#0E0201" stroke-width="1.2"/></svg>`;
+      const pike = (side) => `<div class="pike ${side}">${skull(side === "left")}<i></i></div>`;
+      const garland = () => `<svg class="garland" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true">${Array.from({ length: 22 }, (_, k) => {
+        const x = k * 18 + 4, y = 6 + Math.sin((k / 21) * Math.PI) * 22;
+        return k % 2 ? `<rect x="${x - 2}" y="${y - 5}" width="14" height="5" rx="2.5" fill="#3B3B40" stroke="#16161A"/>`
+          : `<ellipse cx="${x + 5}" cy="${y - 2}" rx="9" ry="5" fill="none" stroke="#4A4A50" stroke-width="3"/>`;
+      }).join("")}</svg>`;
+      const pile = Array.from({ length: 7 }, (_, k) => `<i class="pile-skull" style="--k:${k}">${skull(k === 3)}</i>`).join("");
+      const embers = Array.from({ length: 20 }, () => `<i class="ember" style="--x:${(Math.random() * 100).toFixed(1)}%;--d:${(2 + Math.random() * 2.4).toFixed(2)}s;--w:${(-Math.random() * 4).toFixed(2)}s;--dx:${(Math.random() * 70 - 35).toFixed(0)}px"></i>`).join("");
       const row = (cls, count) => `<div class="flames ${cls}">${Array.from({ length: count }, (_, i) => flame(i)).join("")}</div>`;
-      return h(`<div class="rage-fx" aria-hidden="true">
+      return h(`<div class="rage-fx metal" aria-hidden="true">
         <svg width="0" height="0" style="position:absolute"><defs>
           <linearGradient id="rgF${n}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFE27A"/><stop offset=".3" stop-color="#FF9A00"/><stop offset=".7" stop-color="#FF2E00"/><stop offset="1" stop-color="#8A0000" stop-opacity="0"/></linearGradient>
           <linearGradient id="rgC${n}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#FFE96B"/><stop offset="1" stop-color="#FFB000" stop-opacity="0"/></linearGradient></defs></svg>
-        <div class="hell-sky"></div>
+        <div class="hell-glow"></div>
+        <div class="demon side l">${demonFace("a")}</div>
         <div class="demon">${skull(true)}</div>
-        ${row("ground", 12)}
+        <div class="demon side r">${demonFace("b")}</div>
+        ${garland()}
+        ${chain("left")}${chain("right")}
+        ${pike("left")}${pike("right")}
+        ${row("back", 9)}
+        ${row("ground", 14)}
+        <div class="skull-pile">${pile}</div>
         <div class="lava"></div>
         <div class="embers">${embers}</div>
+        ${row("floor", 11)}
+        <div class="vignette"></div>
       </div>`);
     }
     function setRage(on) {

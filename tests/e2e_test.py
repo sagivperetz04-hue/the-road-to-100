@@ -622,7 +622,10 @@ async def run(chrome, shots):
                 await s.next()
         await page.wait_for_selector(".game.rage .rage-fx", timeout=3000)
         check(True, "stair 19 turns on hell mode (red, flames)")
-        check(await page.locator(".rage-fx .flame").count() >= 12 and await page.locator(".rage-fx .demon").count() == 1 and await page.locator(".rage-fx .lava").count() == 1, "hell mode draws flames, one skull landmark and a lava edge (inside the scene)")
+        fx = await page.evaluate("""() => { const r = document.querySelector('.rage-fx'); const n = (s) => r.querySelectorAll(s).length;
+          return { flames: n('.flame'), demons: n('.demon'), chains: n('.chain') + n('.garland'), skulls: n('.pike') + n('.pile-skull'), lava: n('.lava') }; }""")
+        check(fx["flames"] >= 30 and fx["demons"] == 3 and fx["chains"] == 3 and fx["skulls"] >= 9 and fx["lava"] == 1,
+              f"hell mode goes metal: demons, flames, chains and skulls ({fx})")
         check(await page.locator(".game .slam").count() == 1, "hell mode slams its 'שלב אחרון' banner")
         try:
             await page.wait_for_function("(() => { const f = Sound.finalState(); return f.on && f.playing; })()", timeout=5000)

@@ -1249,3 +1249,33 @@ html[data-theme="pink"] .home { --sp: var(--accent); }
 .res-line { margin: 8px 0 0; font-size: 16px; line-height: 1.5; color: var(--label2); }
 .res-line b { color: var(--label); font-weight: 700; }
 .result-actions { display: grid; gap: 8px; }
+
+/* ============ METAL PASS – stair 19 in cool mode: demons, flames, chains, skulls (transform/opacity only) ============ */
+.rage-fx.metal { --S: clamp(180px, 26svh, 224px); }
+.rage-fx.metal .hell-glow {
+  position: absolute; inset-inline: 0; top: 0; height: var(--S);
+  background: radial-gradient(120% 85% at 50% 100%, rgba(255, 80, 0, .55), rgba(140, 0, 0, .38) 45%, rgba(30, 0, 0, 0) 78%);
+  animation: hell-pulse 1.3s ease-in-out infinite;
+}
+@keyframes hell-pulse { 50% { opacity: .62; } }
+.rage-fx.metal .demon { left: 50%; margin-left: -36px; width: 72px; top: calc(var(--safe-top) + 40px); opacity: .62; filter: drop-shadow(0 0 14px #FF2A00); }
+.rage-fx.metal .demon.side { width: 64px; margin-left: 0; top: calc(var(--safe-top) + 62px); opacity: .62; animation-duration: 3.1s; }
+.rage-fx.metal .demon.side.l { left: 10px; }
+.rage-fx.metal .demon.side.r { left: auto; right: 10px; animation-delay: -1.3s; }
+.rage-fx.metal .garland { position: absolute; inset-inline: 0; top: calc(var(--safe-top) + 46px); width: 100%; height: 30px; opacity: .85; animation: garland-sway 2.6s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes garland-sway { 50% { transform: translateY(3px) scaleY(1.06); } }
+.rage-fx.metal .chain { top: calc(var(--safe-top) + 40px); height: calc(var(--S) * .62); width: 14px; }
+.rage-fx.metal .chain.left { left: 27%; } .rage-fx.metal .chain.right { right: 27%; left: auto; }
+.rage-fx.metal .pike { top: calc(var(--S) - 112px); }
+.rage-fx.metal .pike svg { width: 42px; }
+.rage-fx.metal .pike i { height: 58px; }
+.rage-fx.metal .pike.left { left: 4px; } .rage-fx.metal .pike.right { right: 4px; }
+.rage-fx.metal .flames.back { top: calc(var(--S) - 80px); height: 72px; opacity: .55; filter: brightness(.7) drop-shadow(0 0 12px rgba(255, 50, 0, .8)); }
+.rage-fx.metal .flames.ground { top: calc(var(--S) - 50px); height: 50px; }
+.rage-fx.metal .skull-pile { position: absolute; inset-inline: 0; top: calc(var(--S) - 30px); display: flex; justify-content: center; gap: 2px; }
+.rage-fx.metal .pile-skull { display: block; width: 28px; transform: translateY(calc((3 - var(--k)) * (3 - var(--k)) * 1.2px)) rotate(calc((var(--k) - 3) * 6deg)); filter: drop-shadow(0 0 5px rgba(255, 60, 0, .9)); }
+.rage-fx.metal .pile-skull svg { width: 100%; }
+.rage-fx.metal .lava { top: calc(var(--S) - 4px); height: 5px; }
+.rage-fx.metal .ember { top: calc(var(--S) - 12px); }
+.rage-fx.metal .flames.floor { top: auto; bottom: 0; height: 64px; opacity: .7; }
+.rage-fx.metal .vignette { opacity: .5; }
