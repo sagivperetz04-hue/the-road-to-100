@@ -1,0 +1,51 @@
+{
+  "id": "arch-history-b",
+  "name": "תולדות האדריכלות ב'+ג'",
+  "code": "",
+  "subtitle": "מהנצרות הקדומה עד הבארוק",
+  "color": "#FF9500",
+  "icon": "columns",
+  "idPrefix": "arch-b",
+  "topics": [
+    {
+      "id": "early-christian",
+      "name": "אדריכלות נוצרית מוקדמת",
+      "order": 1
+    },
+    {
+      "id": "byzantine",
+      "name": "קונסטנטינופול והאדריכלות הביזנטית",
+      "order": 2
+    },
+    {
+      "id": "romanesque",
+      "name": "אדריכלות רומנסקית",
+      "order": 3
+    },
+    {
+      "id": "gothic",
+      "name": "אדריכלות גותית",
+      "order": 4
+    },
+    {
+      "id": "islamic",
+      "name": "אדריכלות אסלאמית",
+      "order": 5
+    },
+    {
+      "id": "merchant-cities",
+      "name": "ערי המסחר בימי הביניים",
+      "order": 6
+    },
+    {
+      "id": "renaissance",
+      "name": "הרנסנס",
+      "order": 7
+    },
+    {
+      "id": "high-renaissance-baroque",
+      "name": "הרנסנס הגבוה והבארוק",
+      "order": 8
+    }
+  ]
+}

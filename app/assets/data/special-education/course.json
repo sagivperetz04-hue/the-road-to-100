@@ -1,0 +1,51 @@
+{
+  "id": "special-education",
+  "name": "אוכלוסיות עם לקויות",
+  "code": "",
+  "subtitle": "אפיונים וסוגיות מרכזיות",
+  "color": "#5AC8FA",
+  "icon": "book",
+  "idPrefix": "sped",
+  "topics": [
+    {
+      "id": "intro-law",
+      "name": "מושגי יסוד וחוק החינוך המיוחד",
+      "order": 1
+    },
+    {
+      "id": "learning-disabilities",
+      "name": "לקויות למידה",
+      "order": 2
+    },
+    {
+      "id": "adhd",
+      "name": "הפרעת קשב (ADHD)",
+      "order": 3
+    },
+    {
+      "id": "autism",
+      "name": "הרצף האוטיסטי",
+      "order": 4
+    },
+    {
+      "id": "intellectual",
+      "name": "מוגבלות שכלית התפתחותית",
+      "order": 5
+    },
+    {
+      "id": "sensory",
+      "name": "לקויות ראייה ושמיעה",
+      "order": 6
+    },
+    {
+      "id": "families",
+      "name": "משפחות לילדים עם לקות",
+      "order": 7
+    },
+    {
+      "id": "inclusion",
+      "name": "שילוב והשתלבות",
+      "order": 8
+    }
+  ]
+}

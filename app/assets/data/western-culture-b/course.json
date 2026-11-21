@@ -1,0 +1,41 @@
+{
+  "id": "western-culture-b",
+  "name": "תחנות בתרבות המערב ב'",
+  "code": "",
+  "subtitle": "מהרומנטיקה עד הפמיניזם",
+  "color": "#5856D6",
+  "icon": "scroll",
+  "idPrefix": "west-b",
+  "topics": [
+    {
+      "id": "romanticism",
+      "name": "הרומנטיקה: קלייסט והופמן",
+      "order": 1
+    },
+    {
+      "id": "nietzsche",
+      "name": "ניטשה",
+      "order": 2
+    },
+    {
+      "id": "freud",
+      "name": "פרויד והפסיכואנליזה",
+      "order": 3
+    },
+    {
+      "id": "marx",
+      "name": "מרקס והקומוניזם",
+      "order": 4
+    },
+    {
+      "id": "existentialism",
+      "name": "סארטר והאקזיסטנציאליזם",
+      "order": 5
+    },
+    {
+      "id": "feminism",
+      "name": "דה בובואר והפמיניזם",
+      "order": 6
+    }
+  ]
+}

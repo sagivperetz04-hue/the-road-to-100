@@ -223,7 +223,7 @@ def cmd_courses(a):
         folder = os.path.join(DATA, e["folder"])
         course = load(os.path.join(folder, "course.json"))
         qs = {s: load(os.path.join(folder, FILES[s]), []) for s in FILES}
-        print(f"\n{e['id']}  ({e['name']}, {e['code']})   ids: {id_prefix(course, folder, 'real')}NNNN, {id_prefix(course, folder, 'generated')}NNNN")
+        print(f"\n{e['id']}  ({e['name']}{', ' + e['code'] if e.get('code') else ''})   ids: {id_prefix(course, folder, 'real')}NNNN, {id_prefix(course, folder, 'generated')}NNNN")
         for t in sorted(course.get("topics", []), key=lambda t: t.get("order", 0)):
             r = sum(q["topic"] == t["id"] for q in qs["real"]); g = sum(q["topic"] == t["id"] for q in qs["generated"])
             src = source_state(e["folder"], t["id"])
@@ -274,7 +274,7 @@ def cmd_add_course(a):
         topics.append({"id": tid, "name": name, "order": i})
     if len({t["id"] for t in topics}) != len(topics):
         sys.exit("topic ids must be different")
-    course = {"id": a.id, "name": a.name, "code": a.code}
+    course = {"id": a.id, "name": a.name, "code": a.code or ""}
     for k in ("subtitle", "color", "icon"):
         if getattr(a, k):
             course[k] = getattr(a, k)
@@ -286,7 +286,7 @@ def cmd_add_course(a):
         save(os.path.join(folder, f), [], indent=1)
     for t in topics:
         stub_source(a.id, t)
-    man.append({"id": a.id, "code": a.code, "name": a.name, "folder": a.id})
+    man.append({"id": a.id, "code": a.code or "", "name": a.name, "folder": a.id})
     save(os.path.join(DATA, "courses.json"), man, indent=2)
     print(f"created course {a.id} with {len(topics)} topic(s); ids will look like {prefix}-real-0001")
     if not topics:
@@ -416,7 +416,7 @@ def main():
 
     p = sub.add_parser("add-course", help="create a course (folder, files, manifest line)")
     p.add_argument("id", help="lowercase id, e.g. art-history-b")
-    p.add_argument("--name", required=True); p.add_argument("--code", required=True, help="course number")
+    p.add_argument("--name", required=True); p.add_argument("--code", default="", help="course number (optional)")
     p.add_argument("--subtitle"); p.add_argument("--color", help="#RRGGBB"); p.add_argument("--icon", choices=ICONS)
     p.add_argument("--prefix", help="short id prefix for its questions, e.g. art-b (default: the course id)")
     p.add_argument("--topic", action="append", help='id=name, repeatable: --topic "baroque=הבארוק"')

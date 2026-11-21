@@ -84,7 +84,7 @@ def serve(site):
 
 class Session:
     def __init__(self, page, answers):
-        self.page, self.answers, self.problems = page, answers, []
+        self.page, self.answers, self.problems, self.summaries = page, answers, [], []
         page.on("console", lambda m: self.problems.append(f"console {m.type}: {m.text}") if m.type in ("error", "warning") else None)
         page.on("pageerror", lambda e: self.problems.append(f"pageerror: {e}"))
         page.on("requestfailed", self._failed)
@@ -123,6 +123,10 @@ class Session:
     async def next(self):
         await self.page.wait_for_selector("[data-foot].show")
         await self.page.click("[data-next]")
+        # every 10 distinct questions the session ends with a summary: keep climbing (the first, bold button)
+        if await self.page.locator(".dim-layer .alert").count():
+            self.summaries.append(await self.page.inner_text(".dim-layer .alert"))
+            await self.page.click(".dim-layer .alert-actions button >> nth=0")
 
     async def climb_to_summit(self, label):
         page = self.page
@@ -302,9 +306,11 @@ async def run(chrome, shots):
                 await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
                 kinds = set()
                 for _ in range(12):
-                    kinds.add((await page.inner_text("[data-card] .badge")).strip())
+                    kinds.add((await page.inner_text("[data-card] .badge.real, [data-card] .badge.generated")).strip())
                     await s.answer(True); await s.next()
-                check(kinds == {"אמיתית", "כללית"}, f"mixed shows both badges: {sorted(kinds)}")
+                pool_kinds = await page.evaluate("() => [...new Set(Data.pool(Data.course('fixture-course'), Data.course('fixture-course').topics.map(t => t.id), 'mixed').map(q => q.source))].sort()")
+                check(pool_kinds == ["generated", "real"] and kinds <= {"אמיתית", "כללית"} and kinds,
+                      f"mixed draws from both sources (pool {pool_kinds}; shown {sorted(kinds)}, unseen questions first)")
                 await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")
             else:
                 await page.click("[data-menu]")
@@ -339,31 +345,46 @@ async def run(chrome, shots):
         await page.evaluate("appBack()"); await s.wait_screen("topics")
         await page.evaluate("appBack()"); await s.wait_screen("courses")
 
-        # bundled courses: generated questions, all topics, to the summit
+        # bundled courses: all topics, every non-empty source to the summit
+        def qcount(folder, src, topic=None):
+            path = os.path.join(ASSETS, "data", folder, f"questions-{src}.json")
+            qs = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
+            return sum(1 for q in qs if topic is None or q["topic"] == topic)
         for entry in manifest:
             if entry["id"] == "fixture-course":
                 continue
+            folder = entry["folder"]
+            n_real, n_gen = qcount(folder, "real"), qcount(folder, "generated")
             await s.open_course(entry["id"])
             # make sure every topic is selected
             if not await page.evaluate("() => document.querySelector('[data-all] .switch').classList.contains('on')"):
                 await page.click("[data-all]")
             await page.click("[data-go]"); await s.wait_screen("source")
-            check(await page.is_disabled('.src-card[data-src="real"]'), f"{entry['id']}: 'real' card disabled (no real questions yet)")
-            check(await page.locator('.src-card[data-src="mixed"]').count() == 0, f"{entry['id']}: no 'mixed' card when one source is empty")
-            await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
+            for src, n in (("real", n_real), ("generated", n_gen)):
+                check(await page.is_disabled(f'.src-card[data-src="{src}"]') == (n == 0),
+                      f"{entry['id']}: '{src}' card {'disabled' if n == 0 else 'enabled'} ({n} questions)")
+            has_mixed = await page.locator('.src-card[data-src="mixed"]').count() > 0
+            check(has_mixed == (n_real > 0 and n_gen > 0), f"{entry['id']}: 'mixed' card only when both sources have questions")
+            play = "generated" if n_gen else "real"
+            await page.click(f'.src-card[data-src="{play}"]'); await s.wait_screen("game")
+            if (n_gen or n_real) < 20:   # small pool: the "questions will repeat" note comes first
+                await page.wait_for_selector(".dim-layer .alert")
+                await page.click(".dim-layer .alert-actions button")
             cap = await page.inner_text("[data-card] .q-caption")
             check(cap.startswith(entry["name"]), f"{entry['id']}: caption shows course + topic ('{cap}')")
-            await s.climb_to_summit(f"{entry['id']}/generated")
+            await s.climb_to_summit(f"{entry['id']}/{play}")
             await page.click("[data-menu]"); await s.wait_screen("source")
             await page.evaluate("appBack()"); await s.wait_screen("topics")
-            # single topic + real -> disabled card with the exact text
-            first = await page.get_attribute(".topic-row >> nth=0", "data-tid")
-            await page.click(f'.topic-row[data-tid="{first}"]')
-            await page.click("[data-go]"); await s.wait_screen("source")
-            txt = await page.inner_text('.src-card[data-src="real"] .src-empty')
-            check(txt == "אין עדיין שאלות כאלה בנושאים שבחרת", f"{entry['id']}: single topic + real shows the disabled card text")
-            await page.evaluate("appBack()"); await s.wait_screen("topics")
-            await page.click("[data-all]")   # restore "all topics"
+            # a single topic whose real pool is empty -> disabled card with the exact text
+            tids = await page.eval_on_selector_all(".topic-row", "els => els.map(e => e.dataset.tid)")
+            empty = next((t for t in tids if qcount(folder, "real", t) == 0), None)
+            if empty and n_real:
+                await page.click(f'.topic-row[data-tid="{empty}"]')
+                await page.click("[data-go]"); await s.wait_screen("source")
+                txt = await page.inner_text('.src-card[data-src="real"] .src-empty')
+                check(txt == "אין עדיין שאלות כאלה בנושאים שבחרת", f"{entry['id']}: single topic + empty real shows the disabled card text")
+                await page.evaluate("appBack()"); await s.wait_screen("topics")
+                await page.click("[data-all]")   # restore "all topics"
             await page.evaluate("appBack()"); await s.wait_screen("courses")
 
         best = await page.locator(".best-pill").all_inner_texts()
@@ -372,6 +393,44 @@ async def run(chrome, shots):
         await page.reload(); await enter(page)
         best2 = await page.locator(".best-pill").all_inner_texts()
         check(best2 == best, "progress survives a reload (localStorage)")
+
+        # study sessions: every 10 distinct questions end with a 3-line summary, and climbing continues
+        check(any("הסבב הושלם" in t and "נכון בניסיון ראשון" in t for t in s.summaries),
+              f"a 10-question session ends with its summary ({len(s.summaries)} summaries seen)")
+        # spaced review: make 3 questions due, then review them from the course card
+        due_ids = await page.evaluate("""() => {
+          const ids = Data.course('arch-history-a').questions.slice(0, 3).map(q => q.id);
+          const d = JSON.parse(localStorage.getItem('stairs.v1'));
+          ids.forEach(id => { d.L[id] = { d: Date.now() - 60000, s: 1, a: 0, r: 0, l: Date.now() - 2 * 86400000 }; });
+          localStorage.setItem('stairs.v1', JSON.stringify(d));
+          return ids;
+        }""")
+        await page.reload(); await enter(page)
+        rev = await page.locator('.review-row[data-review="arch-history-a"]').inner_text()
+        total = await page.inner_text("[data-duetotal]")
+        check(rev.strip() == "3 לחזרה היום" and total.strip() == "לחזרה היום: 3", f"course card and header show the due reviews ('{rev.strip()}', '{total.strip()}')")
+        await page.click('.review-row[data-review="arch-history-a"]'); await s.wait_screen("game")
+        line = await page.inner_text("[data-blockline]")
+        check(line == "חזרה: 0 מתוך 3", f"review session is exactly the due questions ('{line}')")
+        reviewed = []
+        for i in range(3):
+            reviewed.append(await s.answer(True))
+            await page.wait_for_selector("[data-foot].show")
+            await page.click("[data-next]")
+        await page.wait_for_selector(".dim-layer .alert")
+        t = await page.inner_text(".dim-layer .alert-title")
+        msg = await page.inner_text(".dim-layer .alert-msg")
+        check(sorted(reviewed) == sorted(due_ids), "the review asked exactly the due questions")
+        check(t == "החזרה הושלמה" and "תשובות נכונות בחזרה מתוזמנת: 3" in msg, f"review ends with its summary ('{t}' / {msg!r})")
+        await page.click("text=לסיום"); await s.wait_screen("courses")
+        check(await page.locator('.review-row[data-review="arch-history-a"]').count() == 0, "after the review the course has nothing due")
+        nxt = await page.evaluate(f"() => {json.dumps(due_ids)}.map(id => Math.round((Store.learning(id).dueAt - Date.now()) / 86400000))")
+        check(all(n == 3 for n in nxt), f"a correct review moves the question to the next interval, 3 days ({nxt})")
+        # topic progress: the reviewed questions show as seen on the topic rows
+        await s.open_course("arch-history-a")
+        bar = await page.locator(".topic-row >> nth=0").get_attribute("aria-label")
+        check("נצפו" in (bar or "") and "נענו שוב נכון" in (bar or ""), f"topic rows carry seen / recalled numbers ('{bar}')")
+        await page.evaluate("appBack()"); await s.wait_screen("courses")
         check(not s.problems, "no console errors / warnings / failed requests" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
         await ctx.close()
 

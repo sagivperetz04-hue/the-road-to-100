@@ -178,7 +178,7 @@
       ${navbar({ title: "בחרי קורס", action: `<span class="nav-actions"><button class="nav-action" data-act="theme" aria-label="ערכת צבעים">${Icons.palette()}</button>${Sound.hasMusic && Store.mode !== "boring" ? '<button class="nav-action" data-act="music" aria-label="מוזיקה"></button>' : ""}<button class="nav-action" data-act="sound" aria-label="צלילים"></button></span>` })}
       <div class="scroller">
         <div class="banner" data-banner aria-hidden="true"></div>
-        <div class="large-title"><h1>בחרי קורס</h1><p>20 תשובות נכונות ברצף = פסגה.</p>
+        <div class="large-title"><h1>בחרי קורס</h1><p>20 תשובות נכונות ברצף = פסגה.</p><p class="due-total" data-duetotal hidden></p>
           <button class="mode-pill ${Store.mode}" data-act="mode">מצב: ${Store.mode === "boring" ? "משעמם" : "למגניבים בלבד"}<span>החלפה</span></button></div>
         <div class="group" data-list></div>
         <div class="section-footer">ההתקדמות נשמרת במכשיר הזה.</div>
@@ -205,16 +205,28 @@
 
     function render() {
       const list = $("[data-list]", el);
+      const now = Date.now();
+      let total = 0;
       list.innerHTML = Data.courses.map((c) => {
         const best = Store.bestForCourse(c.id);
-        return `<button class="row course-row" data-id="${esc(c.id)}">
+        const due = new Set(dueQuestions(c.questions, now).map((q) => q.id)).size;
+        total += due;
+        return `<div class="course-item ${due ? "has-review" : ""}"><button class="row course-row" data-id="${esc(c.id)}">
           <span class="icon-tile" style="background:${courseColor(c)}">${(Icons[c.icon] || Icons.book)()}</span>
           <span class="row-body"><span class="row-title">${esc(c.name)}</span>
             <span class="row-sub"><span class="meta-item">${nTopics(c.topics.length)}</span> · <span class="meta-item">${nQuestions(c.questions.length)}</span></span>
             <span class="row-meta"><span class="best-pill ${best ? "" : "zero"}" aria-label="שיא רצף ${best}">${Icons.flame()}${best ? `שיא ${best} ברצף` : "עוד אין שיא"}</span>${best ? `<span class="course-progress" style="--p:${(Math.min(best, GOAL) / GOAL).toFixed(2)}" aria-hidden="true"><i></i></span>` : ""}</span></span>
           <span class="row-trail">${Icons.chevron()}</span>
-        </button>`;
+        </button>${due ? `<button class="review-row" data-review="${esc(c.id)}" aria-label="${due} לחזרה היום: חזרה בכל הנושאים, מכל המקורות"><span class="review-dot" aria-hidden="true"></span><span class="review-label">${due} לחזרה היום</span>${Icons.chevron()}</button>` : ""}</div>`;
       }).join("");
+      const dt = $("[data-duetotal]", el);
+      dt.hidden = !total;
+      dt.textContent = total ? `לחזרה היום: ${total}` : "";
+      $$(".review-row", list).forEach((b) => b.addEventListener("click", () => {
+        Sound.unlock(); Sound.sfx("tap"); haptic("tap");
+        const c = Data.course(b.dataset.review);
+        push(gameScreen(c, c.topics.map((t) => t.id), "mixed", { review: true }));
+      }));
       $$(".course-row", list).forEach((b) => b.addEventListener("click", () => {
         Sound.unlock(); Sound.sfx("tap"); haptic("tap");
         push(topicsScreen(Data.course(b.dataset.id)));
@@ -230,6 +242,13 @@
     const saved = (Store.lastTopics(course.id) || []).filter((t) => all.includes(t));
     let selected = new Set(saved.length ? saved : all);
     const countFor = (tid) => course.questions.filter((q) => q.topic === tid).length;
+    /** Per topic: questions seen, recalled later (a later correct answer after 72 h), due now. Ids are counted once. */
+    function topicProgress(tid) {
+      const now = Date.now(), ids = new Set(course.questions.filter((q) => q.topic === tid).map((q) => q.id));
+      let seen = 0, recalled = 0, due = 0;
+      ids.forEach((id) => { const L = Store.learning(id, now); if (L.seen) seen++; if (L.recalled) recalled++; if (L.due) due++; });
+      return { seen, recalled, due };
+    }
 
     const el = h(`<section data-screen="topics">
       ${navbar({ title: "על מה מתרגלים?", back: "קורסים" })}
@@ -241,13 +260,16 @@
             <span class="switch" aria-hidden="true"></span>
           </button>
         </div>
-        <div class="section-header">נושאים</div>
+        <div class="section-header topics-head"><span>נושאים</span><span class="legend" aria-hidden="true"><i class="lg seen"></i>נצפו<i class="lg recalled"></i>נענו שוב נכון</span></div>
         <div class="group" data-topics>
           ${course.topics.map((t) => {
             const n = countFor(t.id);
-            return `<button class="row topic-row ${n ? "" : "empty"}" data-tid="${esc(t.id)}" role="checkbox">
-              <span class="row-body"><span class="row-title">${esc(t.name)}</span>${t.note || !n ? `<span class="row-sub">${esc(n ? t.note : "אין עדיין שאלות בנושא הזה")}</span>` : ""}</span>
-              <span class="row-trail"><span class="count-badge">${n}</span>${Icons.check()}</span>
+            const p = topicProgress(t.id);
+            const label = n ? `${t.name}. מתוך ${n} שאלות: ${p.seen} נצפו, ${p.recalled} נענו שוב נכון לאחר מרווח${p.due ? `, ${p.due} לחזרה` : ""}` : t.name;
+            return `<button class="row topic-row ${n ? "" : "empty"}" data-tid="${esc(t.id)}" role="checkbox" aria-label="${esc(label)}">
+              <span class="row-body"><span class="row-title">${esc(t.name)}</span>${t.note || !n ? `<span class="row-sub">${esc(n ? t.note : "אין עדיין שאלות בנושא הזה")}</span>` : ""}
+                ${n ? `<span class="topic-bar" aria-hidden="true"><i class="seen" style="width:${(100 * (p.seen - p.recalled) / n).toFixed(1)}%"></i><i class="recalled" style="width:${(100 * p.recalled / n).toFixed(1)}%"></i></span>` : ""}</span>
+              <span class="row-trail">${p.due ? `<span class="due-chip" aria-hidden="true">לחזרה: ${p.due}</span>` : ""}<span class="count-badge">${n}</span>${Icons.check()}</span>
             </button>`;
           }).join("")}
         </div>
@@ -339,22 +361,26 @@
   /* ------------------------------------------------------------------ screen 4: the game */
   function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-  /** Weighted shuffle: questions answered wrong before get weight ×2. Never the same question back to back. */
-  function buildDeck(pool, lastId) {
-    const keyed = pool.map((q) => {
-      const w = Store.qStats(q.id).wrong > 0 ? 2 : 1;
-      return { q, k: Math.pow(Math.random(), 1 / w) };
+  const BLOCK = 10;   // a study session: 10 distinct questions, then a short summary
+  /**
+   * Order the candidates for the next question: due reviews first (oldest due first), then unseen questions,
+   * then the rest (least recently seen first). Ties are random.
+   */
+  function rankQuestions(list, now) {
+    const keyed = shuffle(list.slice()).map((q) => {
+      const L = Store.learning(q.id, now);
+      return { q, g: L.due ? 0 : L.seen ? 2 : 1, k: L.due ? L.dueAt : L.last };
     });
-    keyed.sort((a, b) => b.k - a.k);
-    const deck = keyed.map((x) => x.q);
-    if (deck.length > 1 && deck[0].id === lastId) [deck[0], deck[1]] = [deck[1], deck[0]];
-    return deck;
+    keyed.sort((a, b) => a.g - b.g || (a.g === 1 ? 0 : a.k - b.k));
+    return keyed.map((x) => x.q);
   }
+  const dueQuestions = (questions, now = Date.now()) => questions.filter((q) => Store.learning(q.id, now).due);
 
   let rageN = 0;
-  function gameScreen(course, topics, source) {
-    const pool = Data.pool(course, topics, source);
-    let deck = [], lastId = null, current = null, order = [], answered = false;
+  function gameScreen(course, topics, source, opts = {}) {
+    let review = !!opts.review;                          // "N לחזרה היום": only this course's due questions
+    let pool = review ? course.questions.slice() : Data.pool(course, topics, source);
+    let lastId = null, current = null, order = [], answered = false;
     let streak = 0, summitOpen = false, alive = true, islandTimer = 0, started = false;
     const C = 2 * Math.PI * 18;
 
@@ -373,7 +399,7 @@
         </div>
       </div>
       <div class="scene" data-scene></div>
-      <div class="game-body" data-body><div class="qcard" data-card></div></div>
+      <div class="game-body" data-body><div class="block-line" data-blockline aria-live="polite"></div><div class="qcard" data-card></div></div>
       <div class="game-foot" data-foot><button class="btn-primary" data-next>לשאלה הבאה</button></div>
     </section>`);
 
@@ -388,6 +414,48 @@
     const foot = $("[data-foot]", el);
     const body = $("[data-body]", el);
     const island = $("[data-island]", el);
+
+    /* ---- the study session ("סבב"): 10 distinct questions; falls never reset it */
+    let block = newBlock(), shownAs = null;   // shownAs: how the current question was picked (retry, was due, was new)
+    function newBlock() {
+      const size = review ? dueQuestions(pool).length : new Set(pool.map((q) => q.id)).size;
+      return { target: Math.min(BLOCK, size), done: new Set(), firstOk: 0, fresh: 0, dueOk: 0, retries: [] };
+    }
+    const blockComplete = () => block.done.size >= block.target;
+    function paintBlock() {
+      $("[data-blockline]", el).textContent = `${review ? "חזרה" : "הסבב"}: ${block.done.size} מתוך ${block.target}`;
+    }
+    function summaryLines() {
+      return [`נכון בניסיון ראשון: ${block.firstOk} מתוך ${block.done.size}`, `שאלות חדשות: ${block.fresh}`, `תשובות נכונות בחזרה מתוזמנת: ${block.dueOk}`];
+    }
+    /** The next question: a retry whose wait is over, else the best-ranked one not yet answered in this session. */
+    function pickNext() {
+      const ri = block.retries.findIndex((r) => r.after <= block.done.size && r.id !== lastId);
+      if (ri >= 0) {
+        const r = block.retries.splice(ri, 1)[0];
+        const q = pool.find((x) => x.id === r.id);
+        if (q) return { q, retry: true };
+      }
+      const now = Date.now();
+      let cand = pool.filter((q) => !block.done.has(q.id) && q.id !== lastId);
+      if (review) cand = cand.filter((q) => Store.learning(q.id, now).due);
+      const q = rankQuestions(cand, now)[0];
+      return q ? { q, retry: false } : null;
+    }
+    async function finishBlock() {
+      let buttons, title;
+      const left = review ? dueQuestions(pool).length : 0;
+      if (review && left) { title = "סבב החזרה הושלם"; buttons = [{ text: "להמשך החזרה", value: "go", style: "bold", cancel: true }, { text: "לסיום", value: "end" }]; }
+      else if (review) { title = "החזרה הושלמה"; buttons = [{ text: "לתרגול מעורב", value: "mix", style: "bold", cancel: true }, { text: "לסיום", value: "end" }]; }
+      else { title = "הסבב הושלם"; buttons = [{ text: "להמשיך לטפס", value: "go", style: "bold", cancel: true }, { text: "לסיום", value: "end" }]; }
+      haptic("success");
+      const r = await showAlert({ title, message: summaryLines().join("\n"), buttons });
+      if (!alive) return;
+      if (r === "end") { pop(); return; }
+      if (r === "mix") { review = false; pool = Data.pool(course, topics, "mixed"); }
+      block = newBlock();
+      nextQuestion();
+    }
 
     function paintRing(pulse) {
       const arc = $(".arc", el);
@@ -487,16 +555,21 @@
     }
 
     function nextQuestion() {
-      if (!deck.length) deck = buildDeck(pool, lastId);
-      current = deck.shift();
+      if (blockComplete()) { finishBlock(); return; }
+      const next = pickNext();
+      if (!next) { block.target = block.done.size; finishBlock(); return; }   // a small pool ran out
+      current = next.q;
       lastId = current.id;
+      const L = Store.learning(current.id);
+      shownAs = { retry: next.retry, due: L.due, fresh: !L.seen, prevSeen: Store.expose(current.id) };
+      paintBlock();
       order = shuffle([0, 1, 2, 3]);     // never trust the stored option order
       answered = false;
       const info = SOURCE_INFO[current.source];
       card.dataset.qid = current.id;
       card.innerHTML = `
         <div class="q-meta"><div class="q-caption"><span class="q-course">${esc(course.name)}</span><span class="q-topic">${esc(Data.topicName(course, current.topic))}</span></div>
-          <span class="badge ${current.source}">${current.source === "real" ? Icons.exam() : Icons.sparkles()}${esc(info.badge)}</span></div>
+          <span class="q-badges">${shownAs.retry ? '<span class="badge retry">ניסיון נוסף</span>' : ""}<span class="badge ${current.source}">${current.source === "real" ? Icons.exam() : Icons.sparkles()}${esc(info.badge)}</span></span></div>
         <div class="q-text" id="qtext">${esc(current.q)}</div>
         <div class="opts" role="group" aria-labelledby="qtext">
           ${order.map((oi, k) => `<button class="opt" data-oi="${oi}"><span class="opt-letter" aria-hidden="true">${LETTERS[k]}</span><span class="opt-text">${chain(current.options[oi])}</span><span class="opt-mark"></span></button>`).join("")}
@@ -512,7 +585,16 @@
       if (answered || summitOpen) return;
       answered = true;
       const ok = oi === current.answer;
-      Store.recordAnswer(current.id, ok);
+      Store.recordAnswer(current.id, ok, { retry: shownAs.retry, prevSeen: shownAs.prevSeen });
+      if (!shownAs.retry) {
+        block.done.add(current.id);
+        if (ok) block.firstOk += 1;
+        if (shownAs.fresh) block.fresh += 1;
+        if (shownAs.due && ok) block.dueOk += 1;
+        // one more try later in this session, after 5 other questions (never extends the session)
+        if (!ok && !block.retries.some((r) => r.id === current.id)) block.retries.push({ id: current.id, after: block.done.size + 5 });
+      }
+      paintBlock();
       $$(".opt", card).forEach((b) => {
         b.disabled = true;
         const i = +b.dataset.oi;
@@ -719,6 +801,7 @@
         <div class="stage">${buddy(true)}<span class="hero-wrap"><span class="sm-sparkle s1"></span><span class="sm-sparkle s2"></span><span class="sm-sparkle s3"></span>${Icons.crown()}${Scene.monsterSvg(theme, "party", "hero")}</span>${buddy(false)}</div>
         <h2 id="sm-t">ציציפלצת האולטימטיבית</h2>
         <p class="sm-line">${summits === 1 ? "הפסגה הראשונה שלך!" : casual ? "הגעת לפסגה!" : `${GOAL} תשובות נכונות ברצף`} · ${esc(course.name)}</p>
+        <p class="sm-sum">${review ? "חזרה" : "הסבב"}: ${block.done.size} מתוך ${block.target} · ${summaryLines()[0]}</p>
         <div class="stats">
           <div class="stat key"><b data-to="${st.best}">${st.best}</b><span>שיא רצף</span></div>
           <div class="stat"><b data-to="${summits}">${summits}</b><span>${casual ? "פסגות עם נקודות שמירה" : "פסגות בקורס"}</span></div>
@@ -744,7 +827,11 @@
       const close = () => { stop(); ov.remove(); overlays.splice(overlays.indexOf(entry), 1); summitOpen = false; Sound.music("game"); };
       const entry = { onBack: () => { close(); pop(); } };
       overlays.push(entry);
-      $("[data-again]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); streak = 0; run = 0; scene.set(0); paintRing(false); nextQuestion(); });
+      $("[data-again]", ov).addEventListener("click", () => {
+        Sound.sfx("tap"); close(); streak = 0; run = 0; scene.set(0); paintRing(false);
+        if (blockComplete()) block = newBlock();   // the summit already showed this session's result
+        nextQuestion();
+      });
       $("[data-menu]", ov).addEventListener("click", () => { Sound.sfx("tap"); close(); pop(); });
       $("#overlay-root").appendChild(ov);
       $("[data-again]", ov).focus({ preventScroll: true });
@@ -774,7 +861,11 @@
         card.innerHTML = `<div class="q-text">אין שאלות לבחירה הזו.</div>`;
         return;
       }
-      if (pool.length < GOAL) {
+      if (review) {
+        const t = h(`<div class="cp-toast" role="status">${Icons.tick()}<span>חזרה · כל הנושאים · מקורות מעורבים</span></div>`);
+        sceneBox.appendChild(t);
+        setTimeout(() => t.remove(), 2200);
+      } else if (pool.length < GOAL) {
         await showAlert({
           title: "שימי לב",
           message: `יש רק ${pool.length} שאלות. אחרי שייגמרו הן יחזרו בסדר אחר.`,

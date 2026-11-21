@@ -1198,3 +1198,32 @@ html[data-theme="pink"] .home { --sp: var(--accent); }
 .np-note { min-height: 0; margin-top: 0; }
 .np-note:empty { display: none; }
 .mt-head { padding-bottom: 0; }
+
+/* ============ LEARNING (spaced review, sessions, topic progress) – uses the frozen tokens only ============ */
+.large-title p.due-total { margin-top: 4px; color: var(--accent); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.course-item.has-review { border-radius: var(--radius); background: var(--card); box-shadow: var(--lift); overflow: hidden; }
+.course-item.has-review > .course-row { box-shadow: none; border-radius: 0; background: transparent; }
+.course-item.has-review > .course-row:active { transform: none; background: var(--fill); }
+.review-row {
+  width: 100%; min-height: 44px; padding: 0 16px; display: flex; align-items: center; gap: 10px;
+  border-top: 1px solid var(--sep); color: var(--accent); font-size: 15px; font-weight: 700; text-align: start;
+  transition: background-color .14s var(--ease);
+}
+.review-row:active { background: var(--accent-soft); }
+.review-row .review-label { flex: 1; font-variant-numeric: tabular-nums; }
+.review-row .review-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.review-row .chev { color: var(--accent); }
+.topics-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--label2); }
+.legend .lg { width: 10px; height: 4px; border-radius: 2px; display: inline-block; margin-inline-start: 6px; }
+.lg.seen, .topic-bar .seen { background: var(--accent); opacity: .7; }
+.lg.recalled, .topic-bar .recalled { background: var(--green); }
+.topic-bar { display: flex; height: 4px; margin-top: 8px; border-radius: 2px; background: var(--fill); overflow: hidden; }
+.topic-bar i { display: block; height: 100%; }
+.due-chip { padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.block-line { margin: 0 4px 8px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--label2); font-variant-numeric: tabular-nums; }
+.block-line:empty { display: none; }
+.q-badges { display: inline-flex; gap: 6px; align-items: center; flex: none; }
+.badge.retry { background: linear-gradient(180deg, #FBBF24, #D97706); }
+.alert-msg { white-space: pre-line; }
+.summit .sm-sum { margin: 4px 0 0; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--label2); animation: sm-up .5s .9s var(--spring) both; }

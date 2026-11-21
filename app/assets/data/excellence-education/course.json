@@ -1,0 +1,31 @@
+{
+  "id": "excellence-education",
+  "name": "הצטיינות ושינוי בחינוך",
+  "code": "",
+  "subtitle": "פילוסופיה של החינוך: מהי מצוינות",
+  "color": "#FF9F0A",
+  "icon": "scroll",
+  "idPrefix": "excel",
+  "topics": [
+    {
+      "id": "philosophy",
+      "name": "מהי פילוסופיה? ביקורת וחקירה",
+      "order": 1
+    },
+    {
+      "id": "socrates",
+      "name": "סוקרטס: קריטון ונאום ההגנה",
+      "order": 2
+    },
+    {
+      "id": "philosopher",
+      "name": "מיהו פילוסוף: פיתגורס והארוס",
+      "order": 3
+    },
+    {
+      "id": "meno",
+      "name": "הדיאלוג מנון: האם אפשר ללמד מצוינות?",
+      "order": 4
+    }
+  ]
+}

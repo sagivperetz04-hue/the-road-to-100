@@ -1,0 +1,56 @@
+{
+  "id": "identity-adolescence",
+  "name": "התפתחות זהות בגיל ההתבגרות",
+  "code": "",
+  "subtitle": "ארנט: התבגרות ובגרות מתהווה",
+  "color": "#AF52DE",
+  "icon": "book",
+  "idPrefix": "ident",
+  "topics": [
+    {
+      "id": "intro",
+      "name": "מבוא: מהי התבגרות",
+      "order": 1
+    },
+    {
+      "id": "puberty",
+      "name": "התבגרות מינית והורמונים",
+      "order": 2
+    },
+    {
+      "id": "cognition",
+      "name": "התפתחות קוגניטיבית ומוחית",
+      "order": 3
+    },
+    {
+      "id": "identity",
+      "name": "התפתחות זהות: אריקסון ומרסיה",
+      "order": 4
+    },
+    {
+      "id": "peers-media",
+      "name": "חברים, קבוצות ומדיה",
+      "order": 5
+    },
+    {
+      "id": "eating",
+      "name": "הפרעות אכילה",
+      "order": 6
+    },
+    {
+      "id": "family",
+      "name": "המשפחה וסגנונות הורות",
+      "order": 7
+    },
+    {
+      "id": "love",
+      "name": "אהבה ומיניות",
+      "order": 8
+    },
+    {
+      "id": "emerging-adult",
+      "name": "בגרות מתהווה",
+      "order": 9
+    }
+  ]
+}

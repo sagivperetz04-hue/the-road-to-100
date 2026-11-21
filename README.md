@@ -33,6 +33,15 @@ tests/
 keystore/madregot-release.jks   signing key. Keep it: updates must be signed with the same key.
 ```
 
+## Courses
+
+Twelve courses, each with its topics (`content.py courses` lists them with counts): תולדות האדריכלות א' and ב'+ג',
+תחנות בתרבות המערב א' and ב', התפתחות זהות בגיל ההתבגרות, מבוא כללי (פילוסופיה, סוציולוגיה ופסיכולוגיה),
+הצטיינות ושינוי בחינוך, ייעוץ חינוכי, אוכלוסיות עם לקויות, מתודולוגיה מחקרית א+ב and תרבות חזותית.
+"Real" questions come from exams, exam reconstructions, the lecturers' sample questions and graded quizzes (the `ref`
+says which); questions from students' practice sets or ChatGPT were rewritten and filed as generated. The course
+number (`code`) is optional.
+
 ## Add courses, topics and questions (no code changes)
 
 `tools/content.py` does it for you: it writes the JSON, picks ids, checks everything with the build's own rules
@@ -128,8 +137,26 @@ copyrighted, so `app/assets/audio/music/` and `app/assets/audio/sfx/` are git-ig
 
 Progress is stored in `localStorage` on a fixed in-app origin, so it survives app updates:
 - per course + source: best streak, number of summits, last topic selection;
-- per question: times seen and times answered wrong. Questions she got wrong come up about twice as often,
-  and the same question never appears twice in a row.
+- per question: times seen and times answered wrong, plus a learning state (`L` in `stairs.v1`): when it is due
+  for review, its interval step, and whether it was "recalled later".
+
+## Learning loop (spaced review and study sessions)
+
+Worked out with GPT-6 Astra from the core-loop / progression ideas on gamedesignskills.com: the climb is the game,
+but every answer also builds a learning record that survives falls.
+
+- **Spaced review:** a first correct answer makes a question due tomorrow; a correct answer to a due question moves
+  it to 3, 7, then 14 days. A wrong answer makes it due tomorrow. Early practice and retries never move a due date.
+- **Picking questions:** due questions first (oldest first), then unseen ones, then the rest (least recently seen
+  first). Never the same question twice in a row.
+- **Sessions ("סבב"):** 10 distinct questions (or the pool size), counted across falls. A missed question comes back
+  once, after 5 other questions, as "ניסיון נוסף" (moves the stairs, not the session count). At 10 a 3-line summary:
+  first-try accuracy, new questions, correct scheduled reviews; then keep climbing or finish.
+- **Review from the courses screen:** "לחזרה היום: N" in the header and an "N לחזרה היום" row on each course with due
+  questions; it starts a review of exactly those questions (all topics, all sources).
+- **Topic progress:** a thin bar per topic: seen, and "recalled later" (a correct answer after at least 72 hours
+  without seeing the question, following an earlier correct answer; a wrong answer clears it), plus a due chip.
+- On the first launch with this version, questions answered wrong before become due at once (no recall credit).
 
 ## Themes
 
@@ -193,11 +220,11 @@ and clock changes book both again. Android 13+ asks once for permission to show 
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v3.1-4-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.0-6-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v3.1-4.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.0-6.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

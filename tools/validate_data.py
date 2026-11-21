@@ -69,7 +69,7 @@ def validate(data_dir):
     seen_ids = {}
     seen_courses = set()
     for entry in manifest:
-        for key in ("id", "code", "name", "folder"):
+        for key in ("id", "name", "folder"):   # "code" (the course number) is optional
             if not entry.get(key):
                 errors.append(f"courses.json: entry {entry!r} is missing '{key}'")
         cid, folder = entry.get("id"), entry.get("folder")

@@ -1,0 +1,16 @@
+{
+  "id": "educational-counseling",
+  "name": "ייעוץ חינוכי: תיאוריה ומעשה",
+  "code": "",
+  "subtitle": "מתעדכן עם הסיכומים שלך",
+  "color": "#FF6B6B",
+  "icon": "book",
+  "idPrefix": "couns",
+  "topics": [
+    {
+      "id": "intro-history",
+      "name": "מהו ייעוץ חינוכי ותולדותיו",
+      "order": 1
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "research-methods",
+  "name": "מתודולוגיה מחקרית א+ב",
+  "code": "",
+  "subtitle": "שיטות מחקר וסטטיסטיקה",
+  "color": "#007AFF",
+  "icon": "book",
+  "idPrefix": "method",
+  "topics": [
+    {
+      "id": "research",
+      "name": "מחקר מדעי ומערכי מחקר",
+      "order": 1
+    },
+    {
+      "id": "variables",
+      "name": "משתנים וסולמות מדידה",
+      "order": 2
+    },
+    {
+      "id": "descriptive",
+      "name": "סטטיסטיקה תיאורית",
+      "order": 3
+    },
+    {
+      "id": "sampling",
+      "name": "אוכלוסייה ודגימה",
+      "order": 4
+    },
+    {
+      "id": "reliability-validity",
+      "name": "מהימנות ותוקף",
+      "order": 5
+    },
+    {
+      "id": "inference",
+      "name": "הסקה סטטיסטית",
+      "order": 6
+    }
+  ]
+}

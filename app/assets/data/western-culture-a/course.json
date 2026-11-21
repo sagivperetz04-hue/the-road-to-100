@@ -8,39 +8,66 @@
   "idPrefix": "west-a",
   "topics": [
     {
+      "id": "culture-intro",
+      "name": "מהי תרבות? מהו המערב?",
+      "order": 1,
+      "note": "טיילור, גירץ, ארנולד, באומן"
+    },
+    {
       "id": "genesis",
       "name": "בראשית ב–ד",
-      "order": 1,
+      "order": 2,
       "note": "גן עדן, החטא, קין והבל"
     },
     {
       "id": "iliad-16",
       "name": "איליאדה, שיר 16",
-      "order": 2,
+      "order": 3,
       "note": "מעשה פטרוקלוס"
     },
     {
       "id": "odyssey-19",
       "name": "אודיסאה, שיר 19",
-      "order": 3,
+      "order": 4,
       "note": "פנלופה ורחיצת הרגליים"
+    },
+    {
+      "id": "myth-philosophy",
+      "name": "מיתוס ופילוסופיה: תאלס וסוקרטס",
+      "order": 5
     },
     {
       "id": "plato-cave",
       "name": "אפלטון: משל המערה",
-      "order": 4,
+      "order": 6,
       "note": "פוליטיאה, ספר ז"
+    },
+    {
+      "id": "augustine",
+      "name": "אוגוסטינוס: וידויים",
+      "order": 7
+    },
+    {
+      "id": "scientific-revolution",
+      "name": "המהפכה המדעית: תלמי, קופרניקוס, גלילאו",
+      "order": 8,
+      "note": "כולל ברכט, חיי גלילאו"
+    },
+    {
+      "id": "descartes",
+      "name": "דקארט: הגיונות",
+      "order": 9
     },
     {
       "id": "leibowitz",
       "name": "ליבוביץ: מוסר ומצוות",
-      "order": 5,
+      "order": 10,
       "note": "יהדות, עם יהודי ומדינת ישראל"
     },
     {
       "id": "compare",
       "name": "השוואות בין הטקסטים",
-      "order": 6,
+      "order": 11,
       "note": "שאלות שמשלבות כמה טקסטים"
     }
   ]

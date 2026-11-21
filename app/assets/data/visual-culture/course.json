@@ -1,0 +1,31 @@
+{
+  "id": "visual-culture",
+  "name": "תרבות חזותית",
+  "code": "",
+  "subtitle": "קריאת דימויים: סמיוטיקה ואיקונוגרפיה",
+  "color": "#FF2D55",
+  "icon": "columns",
+  "idPrefix": "visual",
+  "topics": [
+    {
+      "id": "semiotics",
+      "name": "סמיוטיקה: מסר לשוני ואיקוני, סמלים",
+      "order": 1
+    },
+    {
+      "id": "iconography",
+      "name": "המודל האיקונוגרפי (פנופסקי)",
+      "order": 2
+    },
+    {
+      "id": "art-value",
+      "name": "יצירת מופת, מקוריות, קיטש ויופי",
+      "order": 3
+    },
+    {
+      "id": "visual-language",
+      "name": "צבע, צורה ותפיסה חזותית",
+      "order": 4
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 /* Progress, kept in localStorage (every access wrapped in try/catch; falls back to memory). */
 (function () {
   const KEY = "stairs.v1";
-  let mem = null;
+  const DAY = 86400000;
+  const RECALL_GAP = 72 * 3600000;          // a correct answer counts as "recalled later" after 72 h without seeing it
+  const STEP_DAYS = [0, 1, 3, 7, 14];       // review interval per step (step 1 = tomorrow ... capped at 14 days)
+  let mem = null, dirty = false;
 
   function read() {
     if (mem) return mem;
@@ -14,10 +17,19 @@
     if (!data || typeof data !== "object") data = {};
     data.courses = data.courses || {};
     data.q = data.q || {};
+    // learning state per question id: { d: due time, s: step, a: anchor (a correct answer), r: recalled later, l: last seen }
+    data.L = data.L && typeof data.L === "object" ? data.L : {};
+    if (!data.lv) {
+      // first launch with spaced review: questions answered wrong before are due now (history kept, no recall credit)
+      const now = Date.now();
+      Object.keys(data.q).forEach((qid) => { const v = data.q[qid]; if (v && v[1] > 0 && !data.L[qid]) data.L[qid] = { d: now, s: 1, a: 0, r: 0, l: 0 }; });
+      data.lv = 1; dirty = true;
+    }
     data.settings = Object.assign({ sound: true, music: true, theme: "auto" }, data.settings || {});
     // the rules never change silently: players from before keep the full reset
     if (data.settings.difficulty !== "casual" && data.settings.difficulty !== "hardcore") data.settings.difficulty = existing ? "hardcore" : "casual";
     mem = data;
+    if (dirty) { dirty = false; write(); }
     return mem;
   }
 
@@ -80,12 +92,42 @@
     },
 
     qStats(qid) { const v = read().q[qid]; return v ? { seen: v[0], wrong: v[1] } : { seen: 0, wrong: 0 }; },
-    recordAnswer(qid, correct) {
+    /** Learning state of one question: seen at all, due for review now (and since when), recalled later, last seen. */
+    learning(qid, now = Date.now()) {
+      const d = read(), L = d.L[qid], v = d.q[qid];
+      return { seen: !!(v && v[0]) || !!(L && L.l), due: !!(L && L.d && L.d <= now), dueAt: L ? L.d || 0 : 0, recalled: !!(L && L.r), last: L ? L.l || 0 : 0 };
+    },
+    /** The question is on screen: remember when, and return the previous time it was seen (for the 72 h recall rule). */
+    expose(qid, now = Date.now()) {
+      const d = read();
+      const L = d.L[qid] || (d.L[qid] = { d: 0, s: 0, a: 0, r: 0, l: 0 });
+      const prev = L.l || 0;
+      L.l = now; write();
+      return prev;
+    },
+    /**
+     * An answer. Spaced review: the first correct answer -> due tomorrow; a correct answer to a due question ->
+     * the next interval (3, 7, 14 days); a wrong answer -> due tomorrow and no recall credit. Early practice and
+     * same-session retries ({ retry: true }) never move a due date or give recall credit.
+     * prevSeen: when the question was seen before this showing (from expose()).
+     */
+    recordAnswer(qid, correct, opt = {}, now = Date.now()) {
       const d = read();
       const v = d.q[qid] || [0, 0];
       v[0] += 1;
       if (!correct) v[1] += 1;
       d.q[qid] = v;
+      const L = d.L[qid] || (d.L[qid] = { d: 0, s: 0, a: 0, r: 0, l: 0 });
+      const prev = opt.prevSeen != null ? opt.prevSeen : (L.l || 0);
+      if (!correct) {
+        L.a = 0; L.r = 0; L.s = 1; L.d = now + DAY;
+      } else if (!opt.retry) {
+        if (!L.r && L.a && prev && now - prev >= RECALL_GAP) L.r = 1;
+        if (!L.a) L.a = now;
+        if (!L.d) { L.s = 1; L.d = now + DAY; }
+        else if (now >= L.d) { L.s = Math.min((L.s || 1) + 1, 4); L.d = now + STEP_DAYS[L.s] * DAY; }
+      }
+      L.l = Math.max(L.l || 0, now);
       write();
     },
   };
