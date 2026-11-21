@@ -1519,6 +1519,22 @@
     requestAnimationFrame(() => stackEl.classList.remove("no-anim"));
   }
 
+  /* ------------------------------------------------------------------ question updates (data only) */
+  async function lookForQuestionUpdates(force) {
+    let r = null;
+    try { r = await Data.checkForUpdates(force); } catch (e) { r = null; }
+    if (!r) return r;
+    // screens opened before keep their course objects; the list shows the new data now
+    const top = stack[stack.length - 1];
+    if (top && top.el.dataset.screen === "courses" && top.onShow) top.onShow();
+    const msg = r.added === 1 ? "נוספה שאלה חדשה" : r.added > 1 ? `נוספו ${r.added} שאלות חדשות` : "השאלות עודכנו";
+    const t = h(`<div class="update-toast" role="status">${Icons.sparkles()}<span>${msg}</span></div>`);
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3800);
+    return r;
+  }
+  window.appCheckForQuestionUpdates = () => lookForQuestionUpdates(true);   // for tests and debugging
+
   /* ------------------------------------------------------------------ boot */
   async function boot() {
     try {
@@ -1528,6 +1544,7 @@
       SPLASH_CARD = cardEl ? cardEl.outerHTML : "";
       if (sp) startScreen(sp, true);
       else await resetRoot(homeScreen());
+      setTimeout(lookForQuestionUpdates, 4000);   // after the start screen settles; never blocks the app
     } catch (e) {
       const cap = document.querySelector("[data-splash-cap]");
       if (cap) cap.textContent = `לא הצלחתי לטעון את הקורסים. (${e.message})`;

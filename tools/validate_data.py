@@ -262,7 +262,43 @@ def main():
         for e in errors:
             print("  -", e, file=sys.stderr)
         sys.exit(1)
+    stamp_version(data_dir)
     print("\ndata OK")
+
+
+DATA_FORMAT = 1   # bump only when the app can no longer read older data (the app ignores newer formats)
+
+
+def stamp_version(data_dir):
+    """data/version.json tells installed apps whether the questions on GitHub are newer than theirs.
+    The hash covers courses.json and every course folder; "updated" changes only when the hash does."""
+    import hashlib, json as _json, datetime
+    path = os.path.join(data_dir, "version.json")
+    h = hashlib.sha1()
+    manifest = os.path.join(data_dir, "courses.json")
+    files = [manifest]
+    try:
+        for entry in _json.load(open(manifest, encoding="utf-8")):
+            for f in ("course.json", "questions-real.json", "questions-generated.json"):
+                p = os.path.join(data_dir, entry["folder"], f)
+                if os.path.exists(p):
+                    files.append(p)
+    except Exception:
+        return
+    for p in files:
+        h.update(os.path.relpath(p, data_dir).replace(os.sep, "/").encode())
+        h.update(open(p, "rb").read().replace(b"\r\n", b"\n"))
+    digest = h.hexdigest()[:16]
+    try:
+        old = _json.load(open(path, encoding="utf-8"))
+    except Exception:
+        old = {}
+    if old.get("hash") == digest and old.get("format") == DATA_FORMAT:
+        return
+    stamp = {"format": DATA_FORMAT, "hash": digest,
+             "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    open(path, "w", encoding="utf-8", newline="\n").write(_json.dumps(stamp, indent=1) + "\n")
+    print(f"data version: {digest} ({stamp['updated']})")
 
 
 if __name__ == "__main__":

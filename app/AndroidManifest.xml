@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.plap.studystairs">
 
-    <!-- The app never goes online: MainActivity serves everything from /assets and blocks other hosts.
-         INTERNET is declared only because WebView refuses to load even the in-app https origin without it. -->
+    <!-- MainActivity serves everything from /assets and blocks other hosts, with one exception: GET of the question
+         files (.json) in the public GitHub repo's data folder, for question updates (data.js). Nothing is sent. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Vibration on the last stair (a normal permission: granted at install, no prompt). -->
     <uses-permission android:name="android.permission.VIBRATE" />

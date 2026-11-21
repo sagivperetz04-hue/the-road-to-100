@@ -38,6 +38,9 @@ import java.util.Map;
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
+    /** The only place the app may reach online: the question data in the public GitHub repo (read-only). */
+    private static final String UPDATE_HOST = "raw.githubusercontent.com";
+    private static final String UPDATE_PATH = "/sagivperetz04-hue/the-road-to-100/master/app/assets/data/";
     private static final String START_URL = "https://" + HOST + "/index.html";
     private static final int BG = Color.rgb(0xEE, 0xF3, 0xFF);
 
@@ -321,6 +324,12 @@ public class MainActivity extends Activity {
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             Uri url = request.getUrl();
             if (!HOST.equals(url.getHost())) {
+                // question updates: GET of a .json file in the repo's data folder, nothing else
+                String p = url.getPath();
+                if ("https".equals(url.getScheme()) && UPDATE_HOST.equals(url.getHost()) && "GET".equals(request.getMethod())
+                        && p != null && p.startsWith(UPDATE_PATH) && p.endsWith(".json") && !p.contains("..")) {
+                    return null;   // let the WebView fetch it from the network
+                }
                 return empty(403, "Offline app");
             }
             String path = url.getPath();

@@ -133,6 +133,22 @@ set `KS_PASS` / `KEY_ALIAS` / `KEY_PASS` or create `keystore/signing.properties`
 copyrighted, so `app/assets/audio/music/` and `app/assets/audio/sfx/` are git-ignored. Put your own files there
 (same names, or edit the manifest) before building; `validate_data.py` lists anything missing.
 
+## Question updates without a new APK
+
+New questions, topics and courses reach installed apps from this GitHub repo; app code still needs a new APK.
+
+1. Add or edit questions as usual (`tools/content.py ...`). The validator stamps `app/assets/data/version.json`
+   (`hash` of all data files, `updated` time, `format`) whenever the data changes.
+2. Commit and push to `master`. That's it.
+
+On launch the app checks `raw.githubusercontent.com/.../master/app/assets/data/version.json` at most once an hour.
+When it is newer than the data in use, it downloads `courses.json` and every course's files, checks them the way
+loading does (every course loads and has questions), and only then switches to them and keeps them in
+localStorage (`stairs.data.v1`); a cut or broken download changes nothing. A short notice says "נוספו N שאלות
+חדשות". Progress is kept (it's keyed by question id; never renumber ids). An APK whose bundled data is newer wins
+over the downloaded copy. `MainActivity` allows exactly one online address: GET of `.json` files under the repo's
+`app/assets/data/`; everything else stays blocked, and nothing is ever sent. Only push data that may be public.
+
 ## Progress
 
 Progress is stored in `localStorage` on a fixed in-app origin, so it survives app updates:
@@ -234,11 +250,11 @@ and clock changes book both again. Android 13+ asks once for permission to show 
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v4.3-9-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.4-10-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.3-9.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.4-10.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

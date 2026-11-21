@@ -225,6 +225,7 @@ async def run(chrome, shots):
         # ---------------------------------------------------------------- 1. full flows at 393x851
         print("\n[393x851] flows")
         ctx = await browser.new_context(viewport={"width": 393, "height": 851}, device_scale_factor=2, has_touch=True, locale="he-IL")
+        await ctx.add_init_script("window.__noDataUpdates = true")   # tests never reach GitHub
         page = await ctx.new_page()
         s = Session(page, answers)
         await page.goto(url)
@@ -479,6 +480,7 @@ async def run(chrome, shots):
         for (w, hgt) in ((360, 640), (393, 851)):
             print(f"\n[{w}x{hgt}] screens")
             ctx = await browser.new_context(viewport={"width": w, "height": hgt}, device_scale_factor=2, has_touch=True, reduced_motion="reduce")
+            await ctx.add_init_script("window.__noDataUpdates = true")   # tests never reach GitHub
             page = await ctx.new_page()
             s = Session(page, answers)
             await page.goto(url); await enter(page)
@@ -520,12 +522,14 @@ async def run(chrome, shots):
         print("\n[themes] picker, saved setting, every screen in every theme")
         for scheme, want in (("dark", "dark"), ("light", "light")):
             ctx = await browser.new_context(viewport={"width": 393, "height": 851}, color_scheme=scheme)
+            await ctx.add_init_script("window.__noDataUpdates = true")   # tests never reach GitHub
             page = await ctx.new_page()
             await page.goto(url); await enter(page)
             check(await page.get_attribute("html", "data-theme") == want, f"auto theme follows the system ({scheme} -> {want})")
             await ctx.close()
         for w, hgt in ((393, 851), (360, 640)):
             ctx = await browser.new_context(viewport={"width": w, "height": hgt}, device_scale_factor=2, has_touch=True, reduced_motion="reduce")
+            await ctx.add_init_script("window.__noDataUpdates = true")   # tests never reach GitHub
             page = await ctx.new_page()
             s = Session(page, answers)
             await page.goto(url); await enter(page)
@@ -578,6 +582,7 @@ async def run(chrome, shots):
         msite = make_music_site(site)
         mhttpd, murl = serve(msite)
         ctx = await browser.new_context(viewport={"width": 393, "height": 851}, device_scale_factor=2, has_touch=True)
+        await ctx.add_init_script("window.__noDataUpdates = true")   # tests never reach GitHub
         page = await ctx.new_page()
         s = Session(page, answers)
         state = lambda: page.evaluate("Sound.musicState()")
@@ -756,6 +761,54 @@ async def run(chrome, shots):
         await ctx.close()
         mhttpd.shutdown()
         shutil.rmtree(msite, ignore_errors=True)
+
+        # ---------------------------------------------------------------- question updates from GitHub (served by the test)
+        print("\n[question updates]")
+        ctx = await browser.new_context(viewport={"width": 393, "height": 851})
+        page = await ctx.new_page()
+        s = Session(page, answers)
+        data_dir = os.path.join(site, "data")
+        remote = {"broken": True, "hits": 0}
+        new_q = {"id": "west-b-gen-9999", "topic": "romanticism", "source": "generated", "q": "שאלת עדכון לבדיקה?",
+                 "options": ["תשובה א", "תשובה ב", "תשובה ג", "תשובה ד"], "answer": 0, "explanation": "בדיקה.", "ref": "בדיקה", "difficulty": 1}
+
+        async def github(route):
+            remote["hits"] += 1
+            path = route.request.url.split("/app/assets/data/", 1)[-1]
+            if path == "version.json":
+                body = json.dumps({"format": 1, "hash": "test-update", "updated": "2999-01-01T00:00:00Z"})
+            elif path == "western-culture-b/questions-generated.json":
+                qs = json.load(open(os.path.join(data_dir, "western-culture-b", "questions-generated.json"), encoding="utf-8"))
+                body = json.dumps(qs + [new_q], ensure_ascii=False)
+                if remote["broken"]:
+                    body = body[:-7]          # a cut download
+            else:
+                f = os.path.join(data_dir, *path.split("/"))
+                if not os.path.exists(f):
+                    await route.fulfill(status=404, body="", headers={"Access-Control-Allow-Origin": "*"}); return
+                body = open(f, encoding="utf-8").read()
+            await route.fulfill(status=200, body=body, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"})
+        await ctx.route("https://raw.githubusercontent.com/**", github)
+        await page.goto(url); await enter(page)
+        count = "() => Data.courses.reduce((n, c) => n + c.questions.length, 0)"
+        before = await page.evaluate(count)
+        r = await page.evaluate("appCheckForQuestionUpdates()")
+        check(r is None and not await page.evaluate("Data.fromUpdate") and await page.evaluate(count) == before,
+              "a broken download changes nothing")
+        remote["broken"] = False
+        r = await page.evaluate("appCheckForQuestionUpdates()")
+        check(r is not None and r["added"] == 1 and await page.evaluate(count) == before + 1, f"a newer version on GitHub is downloaded and used ({r})")
+        await page.wait_for_selector(".update-toast")
+        check((await page.inner_text(".update-toast")).strip() == "נוספה שאלה חדשה", "a short notice says what changed")
+        await page.reload(); await enter(page)
+        kept = await page.evaluate("() => Data.fromUpdate && Data.courses.some(c => c.questions.some(q => q.id === 'west-b-gen-9999'))")
+        check(kept, "the downloaded questions are used again after a restart (no network needed)")
+        hits = remote["hits"]
+        r = await page.evaluate("Data.checkForUpdates()")
+        check(r is None and remote["hits"] == hits, "no second check within the hour")
+        r = await page.evaluate("Data.checkForUpdates(true)")
+        check(r is None, "the same version is not downloaded again")
+        await ctx.close()
 
         await browser.close()
     httpd.shutdown()
