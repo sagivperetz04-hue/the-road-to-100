@@ -115,7 +115,7 @@
     // three-plane stone stairs (front, top, side), far ones first so each nearer block covers the hidden parts
     const block = (x0, x1, y) => {
       const g = el("g", { "stroke-linejoin": "round" }, world);
-      g.innerHTML = `<path class="st-side" d="M${x1} ${y} L${x1 + DX} ${y - DY} L${x1 + DX} ${GROUND - DY} L${x1} ${GROUND} Z" fill="${M.side}" stroke="${M.outline}" stroke-width=".6"/>
+      g.innerHTML = `<path class="st-side" d="M${x1} ${y} L${x1 + DX} ${y - DY} L${x1 + DX} ${GROUND} L${x1} ${GROUND} Z" fill="${M.side}" stroke="${M.outline}" stroke-width=".6"/>
         <path class="st-top" d="M${x0} ${y} L${x0 + DX} ${y - DY} L${x1 + DX} ${y - DY} L${x1} ${y} Z" fill="${M.top}" stroke="${M.outline}" stroke-width=".6"/>
         <line x1="${x0 + .6}" y1="${y + .8}" x2="${x1 - .6}" y2="${y + .8}" stroke="${M.bevel}" stroke-width="1.2" opacity=".8"/>`;
       el("rect", { class: "step-block", x: x0, y, width: x1 - x0, height: GROUND - y, fill: "url(#stepGrad)", stroke: M.outline, "stroke-width": .6 }, g);
