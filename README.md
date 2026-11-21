@@ -158,6 +158,20 @@ but every answer also builds a learning record that survives falls.
   without seeing the question, following an earlier correct answer; a wrong answer clears it), plus a due chip.
 - On the first launch with this version, questions answered wrong before become due at once (no recall credit).
 
+## Self-check ("בוחן עצמי")
+
+A quiet row under the source cards (selected topics, all sources). Needs at least 10 questions; takes 20 (or the
+pool size). The batch is fixed before it starts: slots go round-robin over the selected topics in a shuffled order;
+inside a topic unseen questions first, then least recently seen, real questions only break ties; then shuffled.
+No stairs, no right/wrong cues, no explanations while answering; "הבא" commits the choice. Answers update the
+review schedule (it is retrieval practice too) but never the climb records; leaving discards the check.
+
+The results: score, how many questions were new and how many came from real exams, a per-topic breakdown
+("לא נבדק בבוחן זה" for topics that got no question), the mistakes with the chosen and correct answers and the
+explanation, "כל התשובות", and the last three results. "לתרגול הטעויות" is one pass through the missed questions with
+explanations. The last 10 results per course are kept (`checks` in `stairs.v1`) with the questions as answered;
+"תוצאות קודמות בקורס" on the source screen reopens them. No readiness percentage or predicted grade, on purpose.
+
 ## Themes
 
 Four themes, picked with the palette button on the first screen and saved with the progress: **auto** (follows the
@@ -220,11 +234,11 @@ and clock changes book both again. Android 13+ asks once for permission to show 
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v4.0-6-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.1-7-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.0-6.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.1-7.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

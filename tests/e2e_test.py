@@ -431,6 +431,47 @@ async def run(chrome, shots):
         bar = await page.locator(".topic-row >> nth=0").get_attribute("aria-label")
         check("נצפו" in (bar or "") and "נענו שוב נכון" in (bar or ""), f"topic rows carry seen / recalled numbers ('{bar}')")
         await page.evaluate("appBack()"); await s.wait_screen("courses")
+
+        # self-check: 20 neutral questions, then the results; history and "practise the mistakes"
+        await s.open_course("intro-education")
+        if not await page.evaluate("() => document.querySelector('[data-all] .switch').classList.contains('on')"):
+            await page.click("[data-all]")
+        await page.click("[data-go]"); await s.wait_screen("source")
+        await page.click("[data-start-check]"); await s.wait_screen("check")
+        asked, wrong_n = [], 0
+        for k in range(20):
+            await page.wait_for_selector("[data-screen='check'] [data-card] .opt")
+            qtext = await page.inner_text("[data-screen='check'] .q-text")
+            q = await page.evaluate("(t) => { const q = Data.course('intro-education').questions.find(x => x.q === t); return { id: q.id, answer: q.answer }; }", qtext)
+            asked.append(q["id"])
+            check_next_disabled = await page.is_disabled("[data-screen='check'] [data-next]")
+            pick = q["answer"] if k % 5 else (q["answer"] + 1) % 4
+            wrong_n += 0 if k % 5 else 1
+            await page.click(f"[data-screen='check'] .opt[data-oi='{pick}']")
+            cues = await page.locator("[data-screen='check'] .opt.correct, [data-screen='check'] .opt.wrong, [data-screen='check'] .explain").count()
+            if k == 0:
+                check(check_next_disabled, "self-check: Next stays disabled until an answer is chosen")
+                check(cues == 0, "self-check: choosing an answer shows no right/wrong cue")
+            await page.click("[data-screen='check'] [data-next]")
+        await page.wait_for_selector(".res-score")
+        score = await page.inner_text(".res-score")
+        check(len(set(asked)) == 20, f"self-check asks 20 different questions ({len(set(asked))})")
+        check(score.strip() == f"{20 - wrong_n} מתוך 20", f"result shows the score ('{score.strip()}')")
+        check(await page.locator("[data-wrong] .res-item").count() == wrong_n, "every mistake is listed with the correct answer")
+        hist = await page.evaluate("() => Store.checks('intro-education').length")
+        check(hist == 1, f"the result is saved in the course history ({hist})")
+        await page.click("[data-practice]"); await s.wait_screen("practice")
+        for k in range(wrong_n):
+            await page.click("[data-screen='practice'] .opt >> nth=0")
+            await page.wait_for_selector("[data-screen='practice'] .explain")
+            await page.click("[data-screen='practice'] [data-next]")
+        await page.wait_for_selector(".dim-layer .alert")
+        check("תרגול הטעויות" in await page.inner_text(".dim-layer .alert-title"), "practising the mistakes is one pass with a summary")
+        await page.click(".dim-layer .alert-actions button"); await s.wait_screen("result")
+        await page.click("[data-finish]"); await s.wait_screen("source")
+        check(await page.locator("[data-history]").count() == 1, "the source screen offers the past results")
+        await page.evaluate("appBack()"); await s.wait_screen("topics")
+        await page.evaluate("appBack()"); await s.wait_screen("courses")
         check(not s.problems, "no console errors / warnings / failed requests" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
         await ctx.close()
 

@@ -91,6 +91,15 @@
       s.summits = (s.summits || 0) + 1; write(); return s.summits;
     },
 
+    /** Self-check results of a course, newest first (the last 10 are kept, with their questions as answered). */
+    checks(cid) { const c = read().checks; return c && Array.isArray(c[cid]) ? c[cid].slice() : []; },
+    saveCheck(cid, result) {
+      const d = read();
+      d.checks = d.checks && typeof d.checks === "object" ? d.checks : {};
+      d.checks[cid] = [result].concat(Array.isArray(d.checks[cid]) ? d.checks[cid] : []).slice(0, 10);
+      write();
+    },
+
     qStats(qid) { const v = read().q[qid]; return v ? { seen: v[0], wrong: v[1] } : { seen: 0, wrong: 0 }; },
     /** Learning state of one question: seen at all, due for review now (and since when), recalled later, last seen. */
     learning(qid, now = Date.now()) {
