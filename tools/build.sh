@@ -90,6 +90,12 @@ rm -rf "$OUT"; mkdir -p "$OUT/gen" "$OUT/classes" "$OUT/dex"
 echo "== aapt2 compile + link"
 AAPT2="$(tool aapt2)"; D8="$(tool d8)"; ZIPALIGN="$(tool zipalign)"; APKSIGNER="$(tool apksigner)"
 "$AAPT2" compile --dir "$ROOT/app/res" -o "$OUT/res.zip"
+# app/res-private (git-ignored) overrides res/ with personal texts that stay out of the public repo
+OVERLAY=()
+if [ -d "$ROOT/app/res-private" ]; then
+  "$AAPT2" compile --dir "$ROOT/app/res-private" -o "$OUT/res-private.zip"
+  OVERLAY=(-R "$OUT/res-private.zip")
+fi
 RENAME=()
 DEBUGFLAG=()
 [ "$DEBUG" = 1 ] && DEBUGFLAG=(--debug-mode)
@@ -98,7 +104,7 @@ DEBUGFLAG=()
   --manifest "$ROOT/app/AndroidManifest.xml" -A "$ROOT/app/assets" \
   --min-sdk-version $MIN_SDK --target-sdk-version $TARGET_SDK \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
-  "${RENAME[@]}" "${DEBUGFLAG[@]}" --java "$OUT/gen" --auto-add-overlay "$OUT/res.zip"
+  "${RENAME[@]}" "${DEBUGFLAG[@]}" --java "$OUT/gen" --auto-add-overlay "$OUT/res.zip" "${OVERLAY[@]}"
 
 echo "== javac"
 # javac reads the @file itself, so on Windows the paths in it must be Windows paths

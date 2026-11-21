@@ -9,3 +9,5 @@ keystore/
 # never in git: copyrighted audio (kept locally for builds)
 app/assets/audio/music/
 app/assets/audio/sfx/
+# never in git: personal texts (laid over app/res by tools/build.sh)
+app/res-private/

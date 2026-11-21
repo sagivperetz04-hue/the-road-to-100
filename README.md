@@ -183,8 +183,9 @@ tab. The choices are saved as `settings.musicPrefs` (`null` = the manifest's cho
 
 ## Daily reminders
 
-`Reminders.java` shows a notification at 08:00 ("בוקר טוב, תתחילי ללמוד") and 20:00 ("ערב טוב,
-תעשי משחק לפני השינה"); the texts are in `res/values/strings.xml`. Each alarm books the next day; boot, app updates
+`Reminders.java` shows a notification at 08:00 and at 20:00. The texts in `res/values/strings.xml` are neutral
+defaults; personal texts go in `app/res-private/values/strings.xml` (git-ignored, same string names
+`reminder_morning` / `reminder_evening`), which the build lays over them. Each alarm books the next day; boot, app updates
 and clock changes book both again. Android 13+ asks once for permission to show notifications. On debug builds,
 `AndroidBridge.testReminder(0|1)` shows one at once.
 
