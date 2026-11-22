@@ -11,7 +11,8 @@
 Usage: python3 tests/e2e_test.py [--chrome /usr/bin/google-chrome] [--shots out_dir]
 Requires: pip install playwright  (uses an installed Chrome/Chromium; no browser download needed)
 """
-import argparse, asyncio, functools, http.server, json, math, os, shutil, socketserver, struct, sys, tempfile, threading, wave
+import argparse
+import base64, asyncio, functools, http.server, json, math, os, shutil, socketserver, struct, sys, tempfile, threading, wave
 
 from playwright.async_api import async_playwright
 
@@ -817,6 +818,47 @@ async def run(chrome, shots):
         r = await page.evaluate("Data.checkForUpdates(true)")
         check(r is None, "the same version is not downloaded again")
         await ctx.close()
+
+        # ---------------------------------------------------------------- picture questions (building identification)
+        print("\n[picture questions]")
+        isite = tempfile.mkdtemp(prefix="stairs-img-")
+        shutil.copytree(site, isite, dirs_exist_ok=True)
+        os.makedirs(os.path.join(isite, "images", "test"), exist_ok=True)
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC")
+        open(os.path.join(isite, "images", "test", "pic.png"), "wb").write(png)
+        json.dump(["test/pic.png"], open(os.path.join(isite, "images", "index.json"), "w"))
+        fq = os.path.join(isite, "data", "fixture-course", "questions-real.json")
+        real = json.load(open(fq, encoding="utf-8"))
+        for q in real:
+            q["image"] = "test/pic.png"
+        real[-1]["image"] = "test/missing.png"      # named in the data, but not in this build
+        json.dump(real, open(fq, "w", encoding="utf-8"), ensure_ascii=False)
+        ihttpd, iurl = serve(isite)
+        ctx = await browser.new_context(viewport={"width": 393, "height": 851})
+        await ctx.add_init_script("window.__noDataUpdates = true")
+        page = await ctx.new_page()
+        s = Session(page, answers)
+        await page.goto(iurl); await enter(page, mode="boring")
+        ids = await page.evaluate("Data.course('fixture-course').questions.filter(q => q.source === 'real').map(q => q.id)")
+        check(len(ids) == len(real) - 1 and real[-1]["id"] not in ids, "a picture question whose picture isn't in the build is left out")
+        await s.open_course("fixture-course"); await page.click("[data-go]"); await s.wait_screen("source")
+        await page.click('.src-card[data-src="real"]'); await s.wait_screen("game")
+        if await page.locator(".dim-layer .alert").count():
+            await page.click(".dim-layer .alert-actions button >> nth=0")
+        await page.wait_for_function("() => { const i = document.querySelector('[data-card] .q-image img'); return i && i.complete && i.naturalWidth > 0; }", timeout=5000)
+        check(True, "the picture shows above the question")
+        await page.click("[data-card] .q-image")
+        check(await page.locator(".zoom-layer img").count() == 1, "tapping the picture opens it full screen")
+        check(await page.evaluate("appBack()") == "handled" and await page.locator(".zoom-layer").count() == 0
+              and await s.screen() == "game", "Back closes the full-screen picture and stays in the game")
+        await page.click("[data-card] .q-image"); await page.click(".zoom-layer")
+        check(await page.locator(".zoom-layer").count() == 0, "a tap closes the full-screen picture")
+        await s.answer(True); await s.next()
+        check(await page.locator("[data-card] .q-image img").count() == 1, "the next picture question shows its picture too")
+        check(not s.problems, "picture questions: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
+        await ctx.close()
+        ihttpd.shutdown()
+        shutil.rmtree(isite, ignore_errors=True)
 
         await browser.close()
     httpd.shutdown()

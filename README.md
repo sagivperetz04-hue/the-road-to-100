@@ -100,6 +100,18 @@ Notes:
 The `id` must be unique across the whole app. `answer` is the index into `options`, and the app shuffles the
 option order every time. `source` must match the file the question is in.
 
+### Picture questions (building identification)
+
+A question can carry `"image": "buildings/parthenon-2.jpg"`, a path under `app/assets/images/`. The picture
+shows above the question, and a tap opens it full screen (a tap or Back closes it). With `content.py`, add an
+`image` (or `תמונה`) column to the CSV, or an `image` field to the JSON. History of architecture A has 55 of them
+in the topic "זיהוי מבנים" (part A of the exam: photos and plans of buildings from the lecturer's list).
+
+The photos come from the lecture slides, so `app/assets/images/buildings/` is git-ignored (like the songs): they
+are in the APK you build, not in GitHub. The validator writes `images/index.json` with the pictures in the build,
+and the app leaves out any question whose picture is missing. So picture questions arrive with a new APK, not
+through question updates, and a build from a fresh clone simply has no picture questions.
+
 ## Generate questions
 
 ```bash
@@ -250,11 +262,11 @@ and clock changes book both again. Android 13+ asks once for permission to show 
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v4.5-11-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.6-12-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.5-11.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.6-12.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

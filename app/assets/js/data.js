@@ -10,9 +10,12 @@
     }
   }
 
+  let IMAGES = new Set();   // images/index.json: the pictures bundled in this APK
   function cleanQuestions(list, source, topicIds) {
     if (!Array.isArray(list)) return [];
     return list.filter((q) =>
+      // a picture question needs its picture in this build (photos are not in the public repo or in updates)
+      (q.image === undefined || (typeof q.image === "string" && IMAGES.has(q.image))) &&
       q && typeof q.id === "string" && typeof q.q === "string" && q.q.trim() &&
       Array.isArray(q.options) && q.options.length === 4 && q.options.every((o) => typeof o === "string" && o.trim()) &&
       Number.isInteger(q.answer) && q.answer >= 0 && q.answer <= 3 &&
@@ -106,6 +109,8 @@
     version: null,          // { format, hash, updated } of the data in use
     fromUpdate: false,      // true when the data came from a downloaded update
     async load() {
+      const imgs = await getJSON("images/index.json", []);
+      IMAGES = new Set(Array.isArray(imgs) ? imgs : []);
       const bundled = await getJSON("data/version.json", null);
       const cache = readCache();
       if (cache && cache.version.format <= FORMAT && newer(cache.version, bundled)) {
@@ -150,6 +155,7 @@
       const total = got.courses.reduce((n, c) => n + c.questions.length, 0);
       return { added: total - before, total };
     },
+    hasImage(src) { return IMAGES.has(src); },
     course(id) { return this.courses.find((c) => c.id === id); },
     /** questions of a course filtered by topics + source ("real" | "generated" | "mixed") */
     pool(course, topics, source) {

@@ -125,6 +125,24 @@
     if (b) b.addEventListener("click", () => { Sound.sfx("tap"); back(); });
   }
 
+  /* ------------------------------------------------------------------ question pictures (building identification) */
+  const qImage = (q) => q && q.image
+    ? `<button class="q-image" type="button" data-zoom="${esc(q.image)}" aria-label="הגדלת התמונה"><img src="images/${esc(q.image)}" alt="תמונה לזיהוי" decoding="async"></button>`
+    : "";
+  function zoomImage(src) {
+    const layer = h(`<div class="zoom-layer" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת"><img src="images/${esc(src)}" alt="תמונה לזיהוי"><button class="zoom-close" aria-label="סגירה">${Icons.cross()}</button></div>`);
+    const close = () => { layer.remove(); const i = overlays.indexOf(entry); if (i >= 0) overlays.splice(i, 1); };
+    const entry = { onBack: close };
+    overlays.push(entry);
+    layer.addEventListener("click", close);
+    $("#overlay-root").appendChild(layer);
+    $(".zoom-close", layer).focus({ preventScroll: true });
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-zoom]");
+    if (b) { Sound.sfx("tap"); zoomImage(b.dataset.zoom); }
+  });
+
   /* ------------------------------------------------------------------ overlays */
   function showAlert({ title, message, buttons, stacked }) {
     return new Promise((resolve) => {
@@ -609,7 +627,7 @@
       card.innerHTML = `
         <div class="q-meta"><div class="q-caption"><span class="q-course">${esc(course.name)}</span><span class="q-topic">${esc(Data.topicName(course, current.topic))}</span></div>
           <span class="q-badges">${shownAs.retry ? '<span class="badge retry">ניסיון נוסף</span>' : ""}<span class="badge ${current.source}">${current.source === "real" ? Icons.exam() : Icons.sparkles()}${esc(info.badge)}</span></span></div>
-        <div class="q-text" id="qtext">${esc(current.q)}</div>
+        ${qImage(current)}<div class="q-text" id="qtext">${esc(current.q)}</div>
         <div class="opts" role="group" aria-labelledby="qtext">
           ${order.map((oi, k) => `<button class="opt" data-oi="${oi}"><span class="opt-letter" aria-hidden="true">${LETTERS[k]}</span><span class="opt-text">${chain(current.options[oi])}</span><span class="opt-mark"></span></button>`).join("")}
         </div>
@@ -955,7 +973,7 @@
 
   function qBody(course, q, order, opts = {}) {
     return `<div class="q-meta"><div class="q-caption"><span class="q-course">${esc(course.name)}</span><span class="q-topic">${esc(Data.topicName(course, q.topic))}</span></div></div>
-      <div class="q-text" id="qtext" tabindex="-1">${esc(q.q)}</div>
+      ${qImage(q)}<div class="q-text" id="qtext" tabindex="-1">${esc(q.q)}</div>
       <div class="opts" role="${opts.radio ? "radiogroup" : "group"}" aria-labelledby="qtext">
         ${order.map((oi, k) => `<button class="opt" data-oi="${oi}" ${opts.radio ? 'role="radio" aria-checked="false"' : ""}><span class="opt-letter" aria-hidden="true">${LETTERS[k]}</span><span class="opt-text">${chain(q.options[oi])}</span><span class="opt-mark"></span></button>`).join("")}
       </div><div data-explain></div>`;
@@ -1007,7 +1025,7 @@
       const result = {
         at: Date.now(), topics: topics.slice(), n: qs.length, score: answers.filter((a) => a.ok).length,
         unseen: answers.filter((a) => !a.wasSeen).length, real: qs.filter((q) => q.source === "real").length,
-        items: qs.map((q, k) => ({ id: q.id, topic: q.topic, source: q.source, q: q.q, options: q.options.slice(), answer: q.answer, explanation: q.explanation || "", chosen: answers[k].chosen })),
+        items: qs.map((q, k) => Object.assign({ id: q.id, topic: q.topic, source: q.source, q: q.q, options: q.options.slice(), answer: q.answer, explanation: q.explanation || "", chosen: answers[k].chosen }, q.image ? { image: q.image } : {})),
       };
       Store.saveCheck(course.id, result);
       haptic("success");
@@ -1036,7 +1054,7 @@
     const item = (it) => {
       const ok = it.chosen === it.answer;
       return `<div class="qcard res-item ${ok ? "ok" : "bad"}">
-        <div class="q-text">${esc(it.q)}</div>
+        ${it.image && Data.hasImage(it.image) ? qImage(it) : ""}<div class="q-text">${esc(it.q)}</div>
         <p class="res-line"><b>התשובה שסומנה:</b> <span>${chain(it.options[it.chosen] || "")}</span> ${ok ? "(נכונה)" : "(שגויה)"}</p>
         ${ok ? "" : `<p class="res-line"><b>התשובה הנכונה:</b> <span>${chain(it.options[it.answer])}</span></p>`}
         ${it.explanation ? `<div class="explain ${ok ? "ok" : "bad"}"><div>${esc(it.explanation)}</div></div>` : ""}</div>`;

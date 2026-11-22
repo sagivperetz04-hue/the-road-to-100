@@ -148,7 +148,14 @@ def validate(data_dir):
                 for field, phrase in summary_phrases(q):
                     errors.append(f"{where}: {field} refers to the summary (\"{phrase}\"); "
                                   "rewrite it as a standalone question about the material")
-                text = str(q.get("q", "")).strip()
+                text = (str(q.get("q", "")).strip(), str(q.get("image", "")))
+                if q.get("image") is not None:
+                    img = str(q.get("image"))
+                    if not img or ".." in img or img.startswith("/"):
+                        errors.append(f"{where}: bad image path '{img}'")
+                    elif not os.path.exists(os.path.join(os.path.dirname(data_dir), "images", *img.split("/"))):
+                        # photos are git-ignored (copyright); the app hides questions whose picture it doesn't have
+                        warnings.append(f"{where}: image missing: images/{img} (put it in app/assets/images/)")
                 if text in texts:
                     warnings.append(f"{where}: same question text appears twice in {fname}")
                 texts.add(text)
@@ -263,7 +270,25 @@ def main():
             print("  -", e, file=sys.stderr)
         sys.exit(1)
     stamp_version(data_dir)
+    write_image_index(os.path.join(os.path.dirname(data_dir), "images"))
     print("\ndata OK")
+
+
+def write_image_index(images_dir):
+    """images/index.json: the pictures bundled in this build. The app hides questions whose picture is missing
+    (photos are git-ignored, and a question update from GitHub may name pictures that only a newer APK has)."""
+    import json as _json
+    files = []
+    if os.path.isdir(images_dir):
+        for root, _, names in os.walk(images_dir):
+            for n in names:
+                if n.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    files.append(os.path.relpath(os.path.join(root, n), images_dir).replace(os.sep, "/"))
+    os.makedirs(images_dir, exist_ok=True)
+    text = _json.dumps(sorted(files), indent=0) + "\n"
+    path = os.path.join(images_dir, "index.json")
+    if not os.path.exists(path) or open(path, encoding="utf-8").read() != text:
+        open(path, "w", encoding="utf-8", newline="\n").write(text)
 
 
 DATA_FORMAT = 1   # bump only when the app can no longer read older data (the app ignores newer formats)

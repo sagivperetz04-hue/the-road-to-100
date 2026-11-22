@@ -47,6 +47,7 @@ HEADERS = {
     "wrong1": ("wrong1", "wrong 1", "מסיח 1", "מסיח1"), "wrong2": ("wrong2", "wrong 2", "מסיח 2", "מסיח2"),
     "wrong3": ("wrong3", "wrong 3", "מסיח 3", "מסיח3"), "explanation": ("explanation", "הסבר"),
     "ref": ("ref", "source ref", "מקור"), "difficulty": ("difficulty", "רמה", "קושי"), "source": ("source", "סוג"),
+    "image": ("image", "תמונה"),
 }
 
 
@@ -148,20 +149,28 @@ def check_question(item, topic_ids):
         errs.append("empty ref (where the question comes from)")
     if item.get("difficulty") not in (1, 2, 3):
         errs.append("difficulty must be 1, 2 or 3")
-    if len(opts) == 4 and giveaway(opts, 0):
+    if len(opts) == 4 and giveaway(opts, item.get("answer", 0)):
         errs.append("the correct answer is much longer than the wrong ones – shorten it or lengthen them")
     for field, phrase in summary_phrases({"q": item.get("q"), "options": opts, "explanation": ex}):
         errs.append(f"{field} refers to the summary (\"{phrase}\"); ask about the material itself")
     return errs
 
 
-def make_question(qid, source, topic, q, correct, wrongs, explanation, ref, difficulty, rng=random):
+def make_question(qid, source, topic, q, correct, wrongs, explanation, ref, difficulty, rng=random, image=""):
     opts = [norm(correct)] + [norm(w) for w in wrongs]
     shuffled = opts[:]
     rng.shuffle(shuffled)
-    return {"id": qid, "topic": topic, "source": source, "q": norm(q), "options": shuffled,
+    item = {"id": qid, "topic": topic, "source": source, "q": norm(q), "options": shuffled,
             "answer": shuffled.index(opts[0]) if opts[0] in shuffled else 0,
             "explanation": norm(explanation), "ref": norm(ref), "difficulty": difficulty}
+    if image:
+        item["image"] = norm(image)   # a file under app/assets/images/, e.g. "buildings/pantheon-1.jpg"
+    return item
+
+
+def question_key(item):
+    """Two questions are the same when the text and the picture are the same (image questions share their text)."""
+    return (norm(item.get("q", "")), norm(item.get("image", "")))
 
 
 def add_questions(entry, folder, course, rows, write=True):
@@ -169,7 +178,7 @@ def add_questions(entry, folder, course, rows, write=True):
     Checks everything first; writes only if every row is fine. Returns the number added."""
     topic_ids = [t["id"] for t in course.get("topics", [])]
     existing = {s: load(os.path.join(folder, FILES[s]), []) for s in FILES}
-    seen = {norm(q["q"]) for s in FILES for q in existing[s]}
+    seen = {question_key(q) for s in FILES for q in existing[s]}
     alloc = {s: id_allocator(course, folder, s) for s in FILES}
     new = {s: [] for s in FILES}
     problems = []
@@ -179,14 +188,16 @@ def add_questions(entry, folder, course, rows, write=True):
             problems.append(f"{where}: source must be real or generated (got '{r.get('source')}')")
             continue
         item = make_question("?", r["source"], r.get("topic"), r.get("q", ""), r.get("correct", ""), r.get("wrongs", []),
-                             r.get("explanation", ""), r.get("ref", ""), r.get("difficulty"))
+                             r.get("explanation", ""), r.get("ref", ""), r.get("difficulty"), image=r.get("image", ""))
         errs = check_question(item, topic_ids)
-        if norm(item["q"]) in seen:
-            errs.append("the same question text already exists in this course")
+        if question_key(item) in seen:
+            errs.append("the same question text (and picture) already exists in this course")
+        if item.get("image") and not os.path.exists(os.path.join(ROOT, "app", "assets", "images", *item["image"].split("/"))):
+            errs.append(f"image not found: app/assets/images/{item['image']}")
         if errs:
             problems += [f"{where}: {e}" for e in errs]
             continue
-        seen.add(norm(item["q"]))
+        seen.add(question_key(item))
         item["id"] = alloc[r["source"]]()
         new[r["source"]].append(item)
     if problems:
@@ -363,7 +374,7 @@ def read_rows(path, default_source):
             rows.append({"_where": f"item {i}", "topic": d.get("topic"), "q": d.get("q") or d.get("question", ""),
                          "correct": d.get("correct", ""), "wrongs": d.get("wrong") or d.get("wrongs") or [],
                          "explanation": d.get("explanation", ""), "ref": d.get("ref", ""),
-                         "difficulty": int(d.get("difficulty") or 2),
+                         "difficulty": int(d.get("difficulty") or 2), "image": d.get("image", ""),
                          "source": SOURCE_WORDS.get(str(d.get("source") or default_source).strip().lower())})
         return rows
     with open(path, encoding="utf-8-sig", newline="") as f:
@@ -388,7 +399,7 @@ def read_rows(path, default_source):
         src = get("source") or default_source
         rows.append({"_where": f"row {n}", "topic": get("topic"), "q": get("q"), "correct": get("correct"),
                      "wrongs": [get("wrong1"), get("wrong2"), get("wrong3")], "explanation": get("explanation"),
-                     "ref": get("ref"), "difficulty": int(diff) if diff.isdigit() else diff,
+                     "ref": get("ref"), "difficulty": int(diff) if diff.isdigit() else diff, "image": get("image"),
                      "source": SOURCE_WORDS.get(src.strip().lower(), src)})
     return rows
 
