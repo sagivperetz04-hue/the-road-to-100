@@ -1544,12 +1544,16 @@
       SPLASH_CARD = cardEl ? cardEl.outerHTML : "";
       if (sp) startScreen(sp, true);
       else await resetRoot(homeScreen());
-      setTimeout(lookForQuestionUpdates, 4000);   // after the start screen settles; never blocks the app
+      setTimeout(lookForQuestionUpdates, window.__updateDelay || 4000);   // after the start screen settles; never blocks the app
     } catch (e) {
       const cap = document.querySelector("[data-splash-cap]");
       if (cap) cap.textContent = `לא הצלחתי לטעון את הקורסים. (${e.message})`;
     }
   }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) Sound.pause(); else Sound.resume(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { Sound.pause(); return; }
+    Sound.resume();
+    if (Data.courses.length) setTimeout(lookForQuestionUpdates, 1500);   // back in the app: look again (at most hourly)
+  });
   boot();
 })();

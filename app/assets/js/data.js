@@ -127,12 +127,18 @@
     async checkForUpdates(force) {
       if (window.__noDataUpdates) return null;
       const now = Date.now();
-      try { if (!force && now - (+localStorage.getItem(CHECK_KEY) || 0) < EVERY) return null; localStorage.setItem(CHECK_KEY, String(now)); } catch (e) { /* storage blocked */ }
+      try { if (!force && now - (+localStorage.getItem(CHECK_KEY) || 0) < EVERY) return null; } catch (e) { /* storage blocked */ }
+      if (this._checking) return null;
+      this._checking = true;
+      try { return await this._check(now); } finally { this._checking = false; }
+    },
+    async _check(now) {
       let remote = null;
       try {
         const res = await fetch(REMOTE + "version.json", { cache: "no-store" });
         if (res.ok) remote = await res.json();
-      } catch (e) { return null; }
+      } catch (e) { return null; }        // offline or no answer: try again on the next launch or resume
+      if (remote) { try { localStorage.setItem(CHECK_KEY, String(now)); } catch (e) { /* storage blocked */ } }
       if (!remote || typeof remote.hash !== "string" || !(remote.format <= FORMAT)) return null;
       if (this.version && remote.hash === this.version.hash) return null;
       if (!newer(remote, this.version)) return null;

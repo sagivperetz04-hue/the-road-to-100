@@ -765,16 +765,19 @@ async def run(chrome, shots):
         # ---------------------------------------------------------------- question updates from GitHub (served by the test)
         print("\n[question updates]")
         ctx = await browser.new_context(viewport={"width": 393, "height": 851})
+        await ctx.add_init_script("window.__updateDelay = 1e9")   # the test drives every check itself
         page = await ctx.new_page()
         s = Session(page, answers)
         data_dir = os.path.join(site, "data")
-        remote = {"broken": True, "hits": 0}
+        remote = {"broken": True, "hits": 0, "down": True}
         new_q = {"id": "west-b-gen-9999", "topic": "romanticism", "source": "generated", "q": "שאלת עדכון לבדיקה?",
                  "options": ["תשובה א", "תשובה ב", "תשובה ג", "תשובה ד"], "answer": 0, "explanation": "בדיקה.", "ref": "בדיקה", "difficulty": 1}
 
         async def github(route):
             remote["hits"] += 1
             path = route.request.url.split("/app/assets/data/", 1)[-1]
+            if remote["down"]:
+                await route.fulfill(status=503, body="", headers={"Access-Control-Allow-Origin": "*"}); return
             if path == "version.json":
                 body = json.dumps({"format": 1, "hash": "test-update", "updated": "2999-01-01T00:00:00Z"})
             elif path == "western-culture-b/questions-generated.json":
@@ -792,6 +795,11 @@ async def run(chrome, shots):
         await page.goto(url); await enter(page)
         count = "() => Data.courses.reduce((n, c) => n + c.questions.length, 0)"
         before = await page.evaluate(count)
+        await page.evaluate("localStorage.removeItem('stairs.data.checked')")
+        r = await page.evaluate("Data.checkForUpdates()")
+        throttled = await page.evaluate("localStorage.getItem('stairs.data.checked')")
+        check(r is None and throttled is None, "when GitHub can't be reached, the next launch tries again (no hourly wait)")
+        remote["down"] = False
         r = await page.evaluate("appCheckForQuestionUpdates()")
         check(r is None and not await page.evaluate("Data.fromUpdate") and await page.evaluate(count) == before,
               "a broken download changes nothing")
