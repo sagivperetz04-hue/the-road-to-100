@@ -2,6 +2,7 @@ package com.plap.studystairs;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
 import android.content.res.Configuration;
@@ -50,6 +51,8 @@ public class MainActivity extends Activity {
     private int rumbleRepeat = -1;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean resumed = false;
+    /** Set when the home-screen widget opened the app: the page asks for it once (takeOpen) and shows the widget settings. */
+    private volatile String pendingOpen = null;
     /** Android 11+: the stair-19 heartbeat as two crisp "thud" primitives, every 1.1 s (no buzzy waveform). */
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
@@ -79,8 +82,12 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         styleSystemBars();
 
+        pendingOpen = openTarget(getIntent());
+
         // daily reminders at 08:00 and 20:00; Android 13+ asks once for permission to show notifications
         Reminders.scheduleAll(this);
+        // redraw the home-screen widget: today's numbers, and fresh tap actions (a force-stop cancels the old ones)
+        TimerWidget.updateAll(this);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
@@ -112,6 +119,23 @@ public class MainActivity extends Activity {
 
         // a restored WebView doesn't bring back the live game state; when nothing comes back, start fresh
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl(START_URL);
+    }
+
+    private static String openTarget(Intent i) {
+        return i != null && "widget".equals(i.getStringExtra(TimerWidget.EXTRA_OPEN)) ? "widget" : null;
+    }
+
+    /** The app is already open (singleTask) and the widget was tapped: show its settings now. */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (openTarget(intent) != null) {
+            // kept until the page takes it: the page may still be loading (the activity can come back here after
+            // its process was killed). A loaded page opens the settings now and clears it (appOpenWidget).
+            pendingOpen = "widget";
+            if (web != null) web.evaluateJavascript("window.appOpenWidget && window.appOpenWidget()", null);
+        }
     }
 
     private void styleSystemBars() {
@@ -286,6 +310,36 @@ public class MainActivity extends Activity {
             if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0 || which < 0 || which > 1) return;
             Reminders.show(MainActivity.this, which);
         }
+
+        /* ---- home-screen widget (TimerWidget) ---- */
+
+        /** The widget's settings as JSON: {title, start, goal, unit, count, theme}. */
+        @JavascriptInterface
+        public String widgetGet() { return TimerWidget.settingsJson(MainActivity.this); }
+
+        /** Saves the settings and redraws every placed widget. */
+        @JavascriptInterface
+        public boolean widgetSave(String json) { return json != null && json.length() < 2000 && TimerWidget.save(MainActivity.this, json); }
+
+        /** Today's sentence (the same one the widget shows). */
+        @JavascriptInterface
+        public String widgetSentence() { return TimerWidget.sentence(MainActivity.this, 0); }
+
+        /** Moves the widget on to the next sentence and returns it. */
+        @JavascriptInterface
+        public String widgetNext() { TimerWidget.next(MainActivity.this); return TimerWidget.sentence(MainActivity.this, 0); }
+
+        /** How many timer widgets are on the home screen. */
+        @JavascriptInterface
+        public int widgetCount() { return TimerWidget.count(MainActivity.this); }
+
+        /** Asks the launcher to add the widget (it shows its own dialog); false when the launcher can't. */
+        @JavascriptInterface
+        public boolean widgetPin() { return TimerWidget.requestPin(MainActivity.this); }
+
+        /** "widget" once when the widget opened the app, else "". */
+        @JavascriptInterface
+        public String takeOpen() { String o = pendingOpen; pendingOpen = null; return o == null ? "" : o; }
 
         @JavascriptInterface
         public void exitApp() {

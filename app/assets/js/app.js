@@ -190,6 +190,214 @@
     if (cur) cur.focus({ preventScroll: true });
   }
 
+  /* ------------------------------------------------------------------ home-screen widget: timer to a goal + sentence of the day */
+  // The widget itself is native (TimerWidget.java); this is its settings page. On a phone the settings live in Android
+  // (AndroidBridge.widget*), in a browser in localStorage. widgetModel() mirrors TimerWidget.build(): keep them in step.
+  const Widget = (() => {
+    const KEY = "stairs.widget.v1";
+    const DEF = { title: "", start: "", goal: "", unit: "days", count: "down", theme: "pink" };
+    const SAMPLES = ["כל מדרגה קטנה היא עדיין צעד למעלה.", "את יכולה לעשות דברים קשים.", "עוד מדרגה אחת, והנוף משתנה."];
+    let sample = 0;
+    const bridge = () => (window.AndroidBridge && window.AndroidBridge.widgetGet ? window.AndroidBridge : null);
+    const call = (fn, fallback) => { try { return fn(); } catch (e) { return fallback; } };
+    return {
+      native: () => !!bridge(),
+      get() {
+        const raw = call(() => (bridge() ? bridge().widgetGet() : localStorage.getItem(KEY)), null);
+        const o = call(() => JSON.parse(raw || "{}"), {});
+        return Object.assign({}, DEF, o && typeof o === "object" ? o : {});
+      },
+      save(cfg) {
+        const s = JSON.stringify(cfg);
+        call(() => (bridge() ? bridge().widgetSave(s) : localStorage.setItem(KEY, s)));
+      },
+      sentence: () => (bridge() ? call(() => bridge().widgetSentence(), "") : SAMPLES[sample % SAMPLES.length]),
+      next() { if (bridge()) return call(() => bridge().widgetNext(), ""); sample++; return SAMPLES[sample % SAMPLES.length]; },
+      count: () => (bridge() && bridge().widgetCount ? call(() => bridge().widgetCount(), 0) : -1),
+      pin: () => !!(bridge() && bridge().widgetPin && call(() => bridge().widgetPin(), false)),
+    };
+  })();
+
+  const dayNum = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || "");
+    return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5) : null;
+  };
+  const todayNum = () => { const d = new Date(); return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); };
+  const isoDay = (n) => new Date(n * 864e5).toISOString().slice(0, 10);
+  function monthsBetween(a, b) {   // whole months from day a to day b (a <= b), and the days left over (like java.util.Calendar)
+    const A = new Date(a * 864e5), B = new Date(b * 864e5);
+    let m = (B.getUTCFullYear() - A.getUTCFullYear()) * 12 + B.getUTCMonth() - A.getUTCMonth();
+    if (B.getUTCDate() < A.getUTCDate()) m--;
+    m = Math.max(0, m);
+    const y = A.getUTCFullYear(), mo = A.getUTCMonth() + m;
+    const last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+    const mid = Math.floor(Date.UTC(y, mo, Math.min(A.getUTCDate(), last)) / 864e5);
+    return [m, b - mid];
+  }
+  const wDays = (n) => (n === 1 ? "יום" : "ימים");
+  const wMonths = (n) => (n === 1 ? "חודש" : "חודשים");
+  const wAndDays = (n) => (n === 1 ? "ועוד יום אחד" : n === 2 ? "ועוד יומיים" : `ועוד ${n} ימים`);
+
+  function widgetModel(cfg, now = todayNum()) {
+    const pro = cfg.theme === "pro", goal = dayNum(cfg.goal), start = dayNum(cfg.start);
+    const months = cfg.unit === "months", up = cfg.count === "up";
+    let label, number, unit = "", sub = "", progress = null;
+    if (goal === null) {
+      label = "טיימר ליעד"; number = "?"; sub = "הקישי כדי להגדיר יעד";
+    } else {
+      if (start !== null && goal > start) progress = Math.max(0, Math.min(1, (now - start) / (goal - start)));
+      if (up && start !== null) {
+        const passed = now - start;
+        if (passed < 0) { label = "מתחילים בעוד"; number = String(-passed); unit = wDays(-passed); }
+        else {
+          label = "עברו";
+          if (months && passed >= 31) { const [m, r] = monthsBetween(start, now); number = String(m); unit = wMonths(m); sub = r > 0 ? wAndDays(r) : ""; }
+          else { number = String(passed); unit = wDays(passed); }
+          const total = goal - start;
+          if (total > 0) sub = (sub ? sub + " · " : "") + (passed >= total ? "היעד הושג!" : `מתוך ${total} ימים`);
+        }
+      } else {
+        const left = goal - now;
+        if (left > 0) {
+          label = "נשארו";
+          if (months && left >= 31) { const [m, r] = monthsBetween(now, goal); number = String(m); unit = wMonths(m); sub = r > 0 ? wAndDays(r) : ""; }
+          else { number = String(left); unit = wDays(left); }
+        } else if (left === 0) { label = "זה היום!"; number = pro ? "0" : "🎉"; unit = pro ? "ימים" : ""; sub = "בהצלחה!"; }
+        else { label = "הגעת ליעד"; number = pro ? "✓" : "🏆"; sub = `לפני ${-left} ${wDays(-left)}`; }
+      }
+    }
+    const title = (cfg.title || "").trim() || (goal === null ? "The Road To 100" : "היעד שלי");
+    return { label, number, unit, sub, title, progress };
+  }
+  window.__widgetModel = widgetModel;   // for tests
+
+  const PINK_ART = `<svg class="wp-rainbow" viewBox="0 0 200 100" aria-hidden="true">${["#FF9BB3", "#FFC59A", "#FFE58F", "#B5EBA8", "#A6D8FF", "#D2B6FF"].map((c, i) => `<path d="M${8 + i * 12} 100a${92 - i * 12} ${92 - i * 12} 0 0 1 ${184 - i * 24} 0" fill="none" stroke="${c}" stroke-width="12"/>`).join("")}</svg>
+    <svg class="wp-sun" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4v8M32 52v8M4 32h8M52 32h8M12.2 12.2l5.7 5.7M46.1 46.1l5.7 5.7M12.2 51.8l5.7-5.7M46.1 17.9l5.7-5.7" stroke="#FFC94A" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="16" fill="#FFD45E"/></svg>
+    <svg class="wp-cloud c1" viewBox="0 0 64 36" aria-hidden="true"><path d="M14 34h36a10 10 0 0 0 2-19.8A14 14 0 0 0 26 10a9 9 0 0 0-14 8 8 8 0 0 0 2 16z" fill="#fff" opacity=".95"/></svg>
+    <svg class="wp-cloud c2" viewBox="0 0 64 36" aria-hidden="true"><path d="M14 34h36a10 10 0 0 0 2-19.8A14 14 0 0 0 26 10a9 9 0 0 0-14 8 8 8 0 0 0 2 16z" fill="#fff" opacity=".9"/></svg>
+    <svg class="wp-spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c1 8 4 11 12 12-8 1-11 4-12 12-1-8-4-11-12-12 8-1 11-4 12-12z" fill="#fff"/></svg>
+    <svg class="wp-spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c1 8 4 11 12 12-8 1-11 4-12 12-1-8-4-11-12-12 8-1 11-4 12-12z" fill="#fff"/></svg>`;
+
+  /** The widget as HTML (same look as the real one); `live` makes the sentence tappable. */
+  function widgetPreview(cfg, sentence, live) {
+    const m = widgetModel(cfg);
+    const pink = cfg.theme !== "pro";
+    const sTag = live ? `button type="button" data-wnext aria-label="המשפט הבא"` : "div";
+    return `<div class="wprev ${pink ? "pink" : "pro"}" dir="rtl">
+      ${pink ? PINK_ART : ""}
+      <div class="wp-timer">
+        <div class="wp-label">${pink ? '<span class="wp-uni" aria-hidden="true">🦄</span>' : ""}${esc(m.label)}</div>
+        <div class="wp-num"><b>${esc(m.number)}</b>${m.unit ? `<span>${esc(m.unit)}</span>` : ""}</div>
+        ${m.sub ? `<div class="wp-sub">${esc(m.sub)}</div>` : ""}
+        ${m.progress !== null ? `<div class="wp-bar"><i style="width:${(m.progress * 100).toFixed(1)}%"></i></div>` : ""}
+        <div class="wp-title">${esc(m.title)}</div>
+      </div>
+      <${sTag} class="wp-sentence">${pink ? "" : '<small>המשפט של היום</small>'}<span>${esc(sentence)}</span></${sTag.split(" ")[0]}>
+    </div>`;
+  }
+
+  let widgetRefresh = null;   // set while the settings page is open
+  /** The widget's settings, full screen above everything (also over the start screen, when the widget opened the app). */
+  function openWidget() {
+    if ($(".wset-layer")) { if (widgetRefresh) widgetRefresh(); return; }   // already open (the widget was tapped again)
+    const cfg = Widget.get();
+    if (!dayNum(cfg.start)) cfg.start = isoDay(todayNum());
+    let sentence = Widget.sentence();
+    const seg = (key, opts) => `<div class="wseg" role="radiogroup" data-seg="${key}">${opts.map(([v, t]) => `<button type="button" role="radio" data-v="${v}">${t}</button>`).join("")}</div>`;
+    const layer = h(`<div class="wset-layer" role="dialog" aria-modal="true" aria-labelledby="ws-t">
+      <div class="navbar"><button class="nav-back" data-ws-close aria-label="סגירה">${Icons.back()}<span>חזרה</span></button>
+        <div class="nav-title" aria-hidden="true">טיימר ליעד</div><span class="nav-spacer"></span></div>
+      <div class="scroller">
+        <div class="large-title"><h1 id="ws-t">טיימר ליעד</h1><p>ווידג'ט למסך הבית: כמה נשאר עד היעד, ומשפט מעודד לכל יום.</p></div>
+        <div class="wprev-wrap" data-prev></div>
+        <p class="wnote center">הקשה על המשפט מחליפה אותו.</p>
+        <h2 class="wgroup">היעד</h2>
+        <div class="wform">
+          <label class="wf-row"><span>שם היעד</span><input type="text" maxlength="40" data-f="title" placeholder="למשל: המבחן באדריכלות" enterkeyhint="done"></label>
+          <label class="wf-row"><span>תאריך היעד</span><input type="date" data-f="goal"></label>
+          <label class="wf-row"><span>מתחילים מ־</span><input type="date" data-f="start"></label>
+        </div>
+        <h2 class="wgroup">מה סופרים</h2>
+        ${seg("count", [["down", "כמה נשאר"], ["up", "כמה עבר"]])}
+        ${seg("unit", [["days", "ימים"], ["months", "חודשים"]])}
+        <h2 class="wgroup">עיצוב</h2>
+        <div class="wthemes">
+          <button type="button" class="wtheme" data-wtheme="pink"><span class="wmini">${widgetPreview({ theme: "pink", goal: isoDay(todayNum() + 42), start: isoDay(todayNum() - 30), title: "המבחן הגדול" }, "את יכולה לעשות דברים קשים.", false)}</span><b>ורוד</b><span>חדי קרן, שמש וקשתות</span></button>
+          <button type="button" class="wtheme" data-wtheme="pro"><span class="wmini">${widgetPreview({ theme: "pro", goal: isoDay(todayNum() + 42), start: isoDay(todayNum() - 30), title: "המבחן הגדול" }, "את יכולה לעשות דברים קשים.", false)}</span><b>מקצועי</b><span>כהה, נקי ושקט</span></button>
+        </div>
+        <div class="wpin" data-pinbox></div>
+      </div></div>`);
+    const close = () => { layer.remove(); const i = overlays.indexOf(entry); if (i >= 0) overlays.splice(i, 1); };
+    const entry = { onBack: close };
+    overlays.push(entry);
+    wireScroller(layer);
+
+    const paintPreview = () => { $("[data-prev]", layer).innerHTML = widgetPreview(cfg, sentence, true); };
+    const paintChoices = () => {
+      $$("[data-seg]", layer).forEach((g) => $$("button", g).forEach((b) => b.setAttribute("aria-checked", cfg[g.dataset.seg] === b.dataset.v ? "true" : "false")));
+      $$("[data-wtheme]", layer).forEach((b) => { const on = (cfg.theme === "pro" ? "pro" : "pink") === b.dataset.wtheme; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    };
+    const paintPin = () => {
+      const n = Widget.count();
+      const box = $("[data-pinbox]", layer);
+      const how = "או ידנית: לחיצה ארוכה על מסך הבית, ווידג'טים, ואז <bdi dir='ltr'>The Road To 100</bdi>.";
+      if (n > 0) box.innerHTML = `<p class="wnote">${Icons.check()}הווידג'ט על מסך הבית ומתעדכן לבד כל יום.</p>`;
+      else if (n === 0) box.innerHTML = `<button class="btn-primary" data-pin>הוספה למסך הבית</button><p class="wnote">${how}</p>`;
+      else box.innerHTML = `<p class="wnote">בטלפון: ${how.replace("או ידנית: ", "")}</p>`;
+      const pb = $("[data-pin]", box);
+      if (pb) pb.addEventListener("click", () => {
+        Sound.sfx("tap"); haptic("tap");
+        if (!Widget.pin()) box.innerHTML = `<p class="wnote">${how.replace("או ידנית: ", "")}</p>`;
+      });
+    };
+    const commit = () => { Widget.save(cfg); paintPreview(); };
+
+    $$("[data-f]", layer).forEach((inp) => {
+      inp.value = cfg[inp.dataset.f] || "";
+      inp.addEventListener("input", () => {
+        const f = inp.dataset.f;
+        if (f === "title") cfg.title = inp.value.slice(0, 40);
+        else cfg[f] = dayNum(inp.value) !== null ? inp.value : "";
+        commit();
+      });
+      if (inp.type === "text") inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
+    });
+    $$("[data-seg] button", layer).forEach((b) => b.addEventListener("click", () => {
+      Sound.sfx("tap"); haptic("tap");
+      cfg[b.closest("[data-seg]").dataset.seg] = b.dataset.v;
+      paintChoices(); commit();
+    }));
+    $$("[data-wtheme]", layer).forEach((b) => b.addEventListener("click", () => {
+      Sound.sfx("tap"); haptic("tap");
+      cfg.theme = b.dataset.wtheme;
+      paintChoices(); commit();
+    }));
+    $("[data-prev]", layer).addEventListener("click", (e) => {
+      if (!e.target.closest("[data-wnext]")) return;
+      Sound.sfx("tap"); haptic("tap");
+      sentence = Widget.next();
+      paintPreview();
+    });
+    $("[data-ws-close]", layer).addEventListener("click", () => { Sound.sfx("tap"); close(); });
+    // back in the app (from the launcher's "add widget" dialog, or after taps on the widget): show the current state
+    widgetRefresh = () => { if (layer.isConnected) { sentence = Widget.sentence(); paintPreview(); paintPin(); } };
+    const onVis = () => {
+      if (!layer.isConnected) { document.removeEventListener("visibilitychange", onVis); if (widgetRefresh && !$(".wset-layer")) widgetRefresh = null; return; }
+      if (!document.hidden) widgetRefresh();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    Widget.save(cfg);      // keeps the start date it showed
+    paintPreview(); paintChoices(); paintPin();
+    $("#overlay-root").appendChild(layer);
+    $("[data-ws-close]", layer).focus({ preventScroll: true });
+  }
+  // MainActivity: the widget was tapped while the app was open (the request is cleared so a reload won't repeat it)
+  window.appOpenWidget = () => {
+    try { if (window.AndroidBridge && window.AndroidBridge.takeOpen) window.AndroidBridge.takeOpen(); } catch (e) { /* no bridge */ }
+    openWidget();
+  };
+
   /* ------------------------------------------------------------------ screen 1: courses */
   function coursesScreen() {
     const el = h(`<section data-screen="courses">
@@ -199,6 +407,9 @@
         <div class="large-title"><h1>בחרי קורס</h1><p>20 תשובות נכונות ברצף = פסגה.</p><p class="due-total" data-duetotal hidden></p>
           <button class="mode-pill ${Store.mode}" data-act="mode">מצב: ${Store.mode === "boring" ? "משעמם" : "למגניבים בלבד"}<span>החלפה</span></button></div>
         <div class="group" data-list></div>
+        <div class="group"><button class="row widget-row" data-act="widget"><span class="icon-tile widget-tile">${Icons.timer()}</span>
+          <span class="row-body"><span class="row-title">טיימר ליעד</span><span class="row-sub">ווידג'ט למסך הבית, עם משפט מעודד לכל יום</span></span>
+          <span class="row-trail">${Icons.chevron()}</span></button></div>
         <div class="section-footer">ההתקדמות נשמרת במכשיר הזה.</div>
       </div></section>`);
     wireScroller(el);
@@ -220,6 +431,7 @@
     offs.push(Theme.onChange(paintBanner));
     $('[data-act="theme"]', el).addEventListener("click", () => { Sound.unlock(); Sound.sfx("tap"); haptic("tap"); themeSheet(); });
     $('[data-act="mode"]', el).addEventListener("click", () => { Sound.sfx("tap"); haptic("tap"); openStart(); });
+    $('[data-act="widget"]', el).addEventListener("click", () => { Sound.unlock(); Sound.sfx("tap"); haptic("tap"); openWidget(); });
 
     function render() {
       const list = $("[data-list]", el);
@@ -1512,7 +1724,7 @@
   /** The "מצב" pill: the start screen again, on top of the courses. Back closes it. */
   function openStart() {
     if (start || !SPLASH_CARD) return;
-    const sp = h(`<div id="splash">${SPLASH_CARD}<h1><bdi dir="ltr">The Road To 100</bdi></h1></div>`);
+    const sp = h(`<div id="splash">${SPLASH_CARD}<h1><bdi dir='ltr'>The Road To 100</bdi></h1></div>`);
     document.body.appendChild(sp);
     startScreen(sp, false);
   }
@@ -1562,6 +1774,8 @@
       SPLASH_CARD = cardEl ? cardEl.outerHTML : "";
       if (sp) startScreen(sp, true);
       else await resetRoot(homeScreen());
+      // opened by a tap on the home-screen widget: its settings first
+      try { if (window.AndroidBridge && window.AndroidBridge.takeOpen && window.AndroidBridge.takeOpen() === "widget") openWidget(); } catch (e) { /* no bridge */ }
       setTimeout(lookForQuestionUpdates, window.__updateDelay || 4000);   // after the start screen settles; never blocks the app
     } catch (e) {
       const cap = document.querySelector("[data-splash-cap]");

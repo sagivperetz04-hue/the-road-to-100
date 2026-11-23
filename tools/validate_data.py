@@ -250,6 +250,7 @@ def main():
     ae, aw = validate_audio(audio_dir)
     errors += ae
     warnings += aw
+    errors += validate_sentences(os.path.join(HERE, "..", "app"))
     if rows:
         w1 = max(width(r[0]) for r in rows) + 2
         w2 = max(width(r[1]) for r in rows) + 2
@@ -272,6 +273,36 @@ def main():
     stamp_version(data_dir)
     write_image_index(os.path.join(os.path.dirname(data_dir), "images"))
     print("\ndata OK")
+
+
+def validate_sentences(app_dir):
+    """The home-screen widget's sentence of the day: res/values/sentences.xml (public) and, when present,
+    res-private/values/sentences.xml (personal, git-ignored). Each needs 365 different, short lines."""
+    import xml.etree.ElementTree as ET
+    errs = []
+    for sub in ("res", "res-private"):
+        path = os.path.join(app_dir, sub, "values", "sentences.xml")
+        if not os.path.exists(path):
+            if sub == "res":
+                errs.append(f"{path}: missing (the widget needs its sentences)")
+            continue
+        try:
+            arr = ET.parse(path).getroot().find("string-array[@name='widget_sentences']")
+        except ET.ParseError as e:
+            errs.append(f"{sub}/values/sentences.xml: {e}")
+            continue
+        items = [(i.text or "").replace("\'", "'").strip() for i in (arr if arr is not None else [])]
+        if len(items) != 365:
+            errs.append(f"{sub}/values/sentences.xml: {len(items)} sentences, expected 365 (one per day)")
+        dups = sorted({t for t in items if items.count(t) > 1})
+        if dups:
+            errs.append(f"{sub}/values/sentences.xml: repeated: {dups[:3]}")
+        for n, t in enumerate(items, 1):
+            if not t:
+                errs.append(f"{sub}/values/sentences.xml: sentence {n} is empty")
+            elif len(t) > 80:
+                errs.append(f"{sub}/values/sentences.xml: sentence {n} is {len(t)} characters (max 80, it must fit the widget)")
+    return errs
 
 
 def write_image_index(images_dir):

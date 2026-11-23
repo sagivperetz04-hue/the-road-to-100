@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Timer widget, professional theme. TimerWidget.java fills the texts. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/wbg_pro"
+    android:layoutDirection="rtl"
+    android:orientation="horizontal"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.44"
+        android:gravity="center_vertical|start"
+        android:orientation="vertical">
+
+        <TextView android:id="@+id/w_label" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="נשארו" android:textColor="#FF8B97AD" android:textSize="12sp" android:fontFamily="sans-serif-medium" android:letterSpacing="0.06" />
+
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+            <TextView android:id="@+id/w_number" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="42" android:textColor="#FFF5F7FB" android:textSize="44sp" android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false" android:maxLines="1" />
+            <TextView android:id="@+id/w_unit" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="6dp" android:layout_marginBottom="6dp"
+                android:text="ימים" android:textColor="#FFA9B6FF" android:textSize="15sp" android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/w_sub" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="ועוד 5 ימים" android:textColor="#FF8B97AD" android:textSize="12sp" android:maxLines="1" android:visibility="gone" />
+
+        <ProgressBar android:id="@+id/w_progress" style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="9dp"
+            android:max="1000" android:progress="620" android:mirrorForRtl="true" android:progressDrawable="@drawable/wprog_pro" />
+
+        <TextView android:id="@+id/w_title" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="המבחן הגדול" android:textColor="#FFE3E8F2" android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" android:maxLines="2" android:ellipsize="end" />
+    </LinearLayout>
+
+    <FrameLayout android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp" android:layout_marginTop="4dp" android:layout_marginBottom="4dp" android:background="@drawable/wrule_pro" />
+
+    <LinearLayout
+        android:id="@+id/w_sentence_box"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.56"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="המשפט של היום"
+            android:textColor="#FF6B7890" android:textSize="11sp" android:fontFamily="sans-serif-medium" android:letterSpacing="0.06" />
+        <TextView android:id="@+id/w_sentence" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:gravity="start" android:text="כל מדרגה קטנה היא עדיין צעד למעלה."
+            android:textColor="#FFE9EDF5" android:textSize="15sp" android:lineSpacingMultiplier="1.15"
+            android:maxLines="4" android:ellipsize="end" />
+    </LinearLayout>
+</LinearLayout>

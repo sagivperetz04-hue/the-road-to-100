@@ -1304,3 +1304,115 @@ html[data-theme="pink"] .home { --sp: var(--accent); }
 .zoom-layer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
 .zoom-close { position: absolute; top: calc(var(--safe-top) + 12px); left: 12px; width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255, 255, 255, .14); color: #34364F; }
 .zoom-close svg { width: 30px; height: 30px; }
+
+/* ============ HOME-SCREEN WIDGET: settings page + preview (the widget itself is native: res/layout/widget_*.xml) ============ */
+.widget-tile { background: linear-gradient(145deg, #FF7EB6, #A78BFA); }
+.wset-layer {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; flex-direction: column;
+  background: var(--bg) var(--pattern);
+  animation: wset-in .32s var(--ease) both;
+}
+@keyframes wset-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.wset-layer .scroller { flex: 1; overflow-y: auto; padding-bottom: calc(28px + var(--safe-bottom)); }
+.wprev-wrap { margin: 14px 16px 0; display: flex; justify-content: center; }
+.wgroup { margin: 22px 26px 8px; font-size: 13px; font-weight: 800; color: var(--label2); letter-spacing: .2px; }
+.wnote { margin: 10px 26px 0; color: var(--label2); font-size: 13px; font-weight: 600; line-height: 1.45; }
+.wnote.center { text-align: center; margin-top: 8px; }
+.wnote svg { display: inline-block; width: 18px; height: 18px; vertical-align: -4px; margin-inline-end: 6px; color: var(--green); }
+.wform { margin: 0 16px; background: var(--card); border-radius: var(--radius); box-shadow: var(--lift); overflow: hidden; }
+.wf-row { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 6px 16px; }
+.wf-row + .wf-row { box-shadow: inset 0 1px 0 var(--sep); }
+.wf-row > span { flex: none; font-size: 16px; font-weight: 700; }
+.wf-row input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 0; border-radius: 12px;
+  background: var(--fill); color: var(--label); font: inherit; font-size: 16px; font-weight: 600; text-align: start;
+  user-select: text; -webkit-user-select: text; color-scheme: inherit;
+}
+.wf-row input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.wf-row input::placeholder { color: var(--label3); }
+.wseg { margin: 0 16px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--fill); }
+.wseg button { min-height: 44px; border-radius: 12px; font-size: 16px; font-weight: 800; color: var(--label2); transition: background-color .2s, color .2s, box-shadow .2s; }
+.wseg button[aria-checked="true"] { background: var(--card); color: var(--accent); box-shadow: 0 2px 0 var(--edge), 0 6px 12px -8px var(--shadow); }
+.wthemes { margin: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wtheme {
+  display: grid; gap: 2px; padding: 10px 10px 12px; text-align: start;
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--lift);
+  outline: 2.5px solid transparent; outline-offset: -2.5px; transition: outline-color .2s, transform .15s;
+}
+.wtheme.on { outline-color: var(--accent); }
+.wtheme:active { transform: translateY(3px); box-shadow: var(--lift-pressed); }
+.wtheme b { margin-top: 6px; font-size: 16px; }
+.wtheme > span:last-child { font-size: 12px; color: var(--label2); font-weight: 600; }
+/* the theme cards draw the widget at full size and scale it down (the WebView has a minimum font size) */
+.wmini { display: block; position: relative; width: 100%; height: 70px; pointer-events: none; }
+.wmini .wprev { position: absolute; top: 0; right: 0; width: 360px; max-width: none; font-size: 16px; transform: scale(.42); transform-origin: top right; }
+.wpin { margin: 22px 16px 0; }
+.wpin .wnote { margin-inline: 10px; }
+
+/* the widget itself, drawn in em so the same markup makes the big preview and the small theme cards */
+.wprev {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 100%; max-width: 22.5em; aspect-ratio: 2.15;
+  display: grid; grid-template-columns: 44% 1fr; align-items: stretch;
+  font-family: system-ui, "AppSans", sans-serif; text-align: start; line-height: 1.2;
+}
+.wprev-wrap .wprev { font-size: min(16px, 4.05vw); }
+.wp-timer { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-inline-end: .5em; }
+.wp-label { display: flex; align-items: center; gap: .25em; font-size: .8125em; font-weight: 600; }
+.wp-uni { font-size: 1.5em; line-height: 1; }
+.wp-num { display: flex; align-items: baseline; gap: .3em; white-space: nowrap; }
+.wp-num b { font-size: 2.75em; line-height: 1.05; }
+.wp-num span { font-size: 1em; }
+.wp-sub { font-size: .75em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wp-bar { height: .44em; margin-top: .45em; border-radius: .25em; overflow: hidden; }
+.wp-bar i { display: block; height: 100%; border-radius: inherit; margin-inline-start: 0; }
+.wp-title { margin-top: .4em; font-size: .8125em; font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.wp-sentence {
+  position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+  font: inherit; text-align: inherit; cursor: pointer;
+}
+.wp-sentence span { font-size: .95em; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.wp-sentence small { font-size: .6875em; font-weight: 600; letter-spacing: .06em; margin-bottom: .3em; }
+
+.wprev.pink {
+  padding: .875em; border-radius: 1.75em;
+  background: linear-gradient(135deg, #FFE4F1, #FFD0E8 50%, #E6DCFF);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .7), 0 1em 1.8em -1em rgba(214, 51, 127, .45);
+  color: #7A2E5C;
+}
+.wprev.pink > svg { position: absolute; z-index: 0; pointer-events: none; }
+.wprev.pink .wp-rainbow { width: 14.4em; left: 50%; bottom: -2.1em; transform: translateX(-50%); opacity: .55; }
+.wprev.pink .wp-sun { width: 3.6em; left: -.9em; top: -.9em; }
+.wprev.pink .wp-cloud.c1 { width: 2.9em; left: 1.9em; top: .4em; }
+.wprev.pink .wp-cloud.c2 { width: 2.4em; right: .6em; bottom: .25em; }
+.wprev.pink .wp-spark.s1 { width: .75em; left: 50%; top: .6em; }
+.wprev.pink .wp-spark.s2 { width: .56em; left: .75em; bottom: .9em; }
+.wprev.pink .wp-timer { position: relative; z-index: 1; }
+.wprev.pink .wp-label { color: #B0306E; }
+.wprev.pink .wp-num b { color: #E0337F; font-weight: 900; text-shadow: 0 2px 0 rgba(255, 255, 255, .5); }
+.wprev.pink .wp-num span { color: #B0306E; font-weight: 900; }
+.wprev.pink .wp-sub { color: #9C4A7A; }
+.wprev.pink .wp-bar { background: rgba(255, 255, 255, .7); }
+.wprev.pink .wp-bar i { background: linear-gradient(90deg, #B98CFF, #FF7EB6); }
+.wprev.pink .wp-title { color: #7A2E5C; }
+.wprev.pink .wp-sentence {
+  padding: .625em; border-radius: 1.25em; text-align: center; align-items: center;
+  background: rgba(255, 255, 255, .85); box-shadow: inset 0 0 0 1px #fff; color: #6B2A55;
+}
+
+.wprev.pro {
+  padding: 1em; border-radius: 1.5em;
+  background: linear-gradient(150deg, #0D1220, #1A2233);
+  box-shadow: inset 0 0 0 1px #2A3346, 0 1em 1.8em -1em rgba(13, 18, 32, .6);
+  color: #E3E8F2;
+}
+.wprev.pro .wp-label { color: #8B97AD; letter-spacing: .06em; }
+.wprev.pro .wp-num b { color: #F5F7FB; font-weight: 300; }
+.wprev.pro .wp-num span { color: #A9B6FF; font-weight: 600; }
+.wprev.pro .wp-sub { color: #8B97AD; }
+.wprev.pro .wp-bar { height: .25em; background: #2A3346; }
+.wprev.pro .wp-bar i { background: #8EA2FF; }
+.wprev.pro .wp-sentence { padding-inline-start: .875em; margin-inline-start: .875em; box-shadow: inset -1px 0 0 #2A3346; color: #E9EDF5; }
+.wprev.pro .wp-sentence small { color: #6B7890; }
+@media (prefers-reduced-motion: reduce) { .wset-layer { animation: none; } }

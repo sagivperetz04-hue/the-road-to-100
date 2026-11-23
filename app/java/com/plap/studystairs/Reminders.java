@@ -33,6 +33,7 @@ public class Reminders extends BroadcastReceiver {
             schedule(c, which);          // the same time tomorrow
         } else {
             scheduleAll(c);              // boot, app update, clock or time-zone change
+            TimerWidget.updateAll(c);    // the widget's midnight alarm is gone after a reboot
         }
     }
 

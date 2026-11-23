@@ -4,4 +4,6 @@
     <string name="reminder_channel">תזכורות יומיות</string>
     <string name="reminder_morning">בוקר טוב! מוכנה לטפס היום?</string>
     <string name="reminder_evening">ערב טוב! עוד טיפוס קצר לפני השינה?</string>
+    <string name="widget_name">טיימר ליעד</string>
+    <string name="widget_desc">טיימר ליעד ומשפט מעודד לכל יום</string>
 </resources>

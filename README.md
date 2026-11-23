@@ -258,15 +258,33 @@ defaults; personal texts go in `app/res-private/values/strings.xml` (git-ignored
 and clock changes book both again. Android 13+ asks once for permission to show notifications. On debug builds,
 `AndroidBridge.testReminder(0|1)` shows one at once.
 
+## Home-screen widget ("טיימר ליעד")
+
+A 4x2 widget (resizable): a timer toward a goal date and a sentence of the day next to it.
+
+- **Settings** (in the app: the "טיימר ליעד" row under the courses, or a tap on the widget's timer): goal name, goal
+  date, start date (for the progress bar), count down ("כמה נשאר") or up ("כמה עבר"), days or months ("2 חודשים ועוד
+  23 ימים"; under a month it shows days), and the look: **ורוד** (unicorn, sunshine, rainbow, clouds) or **מקצועי**
+  (dark slate, one calm accent). The page shows a live preview and has an "add to home screen" button (Android 8+
+  launchers that support pinning; otherwise long-press the home screen, Widgets, The Road To 100).
+- **Sentences**: `res/values/sentences.xml` has 365 motivational lines, one per day (day number mod 365). A tap on
+  the sentence shows the next one. `app/res-private/values/sentences.xml` (git-ignored) replaces the list at build
+  time with one that mixes in personal lines; the validator checks both (365 lines, no repeats, at most 80 characters).
+- **Code**: `TimerWidget.java` draws `res/layout/widget_pink.xml` or `widget_pro.xml` and redraws after midnight
+  (alarm), on clock changes, after boot and app updates, and whenever the app opens. Settings live in
+  SharedPreferences `widget`; the page reads and writes them through `AndroidBridge.widgetGet/widgetSave` (in a
+  browser: localStorage `stairs.widget.v1`). `widgetModel()` in `app.js` mirrors the Java maths for the preview;
+  keep the two in step (the e2e test checks the JS side against fixed dates).
+
 ## Test on a phone or emulator
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v4.6-12-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.7-13-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.6-12.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.7-13.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths
