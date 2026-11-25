@@ -327,7 +327,10 @@
         </div>
         <div class="wpin" data-pinbox></div>
       </div></div>`);
-    const close = () => { layer.remove(); const i = overlays.indexOf(entry); if (i >= 0) overlays.splice(i, 1); };
+    const close = () => {
+      layer.remove(); const i = overlays.indexOf(entry); if (i >= 0) overlays.splice(i, 1);
+      document.removeEventListener("visibilitychange", onVis); widgetRefresh = null;
+    };
     const entry = { onBack: close };
     overlays.push(entry);
     wireScroller(layer);
@@ -380,11 +383,8 @@
     });
     $("[data-ws-close]", layer).addEventListener("click", () => { Sound.sfx("tap"); close(); });
     // back in the app (from the launcher's "add widget" dialog, or after taps on the widget): show the current state
-    widgetRefresh = () => { if (layer.isConnected) { sentence = Widget.sentence(); paintPreview(); paintPin(); } };
-    const onVis = () => {
-      if (!layer.isConnected) { document.removeEventListener("visibilitychange", onVis); if (widgetRefresh && !$(".wset-layer")) widgetRefresh = null; return; }
-      if (!document.hidden) widgetRefresh();
-    };
+    widgetRefresh = () => { sentence = Widget.sentence(); paintPreview(); paintPin(); };
+    const onVis = () => { if (!document.hidden) widgetRefresh(); };
     document.addEventListener("visibilitychange", onVis);
 
     Widget.save(cfg);      // keeps the start date it showed

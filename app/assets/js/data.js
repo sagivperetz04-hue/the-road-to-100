@@ -13,10 +13,10 @@
   let IMAGES = new Set();   // images/index.json: the pictures bundled in this APK
   function cleanQuestions(list, source, topicIds) {
     if (!Array.isArray(list)) return [];
-    return list.filter((q) =>
+    return list.filter((q) => q &&
       // a picture question needs its picture in this build (photos are not in the public repo or in updates)
       (q.image === undefined || (typeof q.image === "string" && IMAGES.has(q.image))) &&
-      q && typeof q.id === "string" && typeof q.q === "string" && q.q.trim() &&
+      typeof q.id === "string" && typeof q.q === "string" && q.q.trim() &&
       Array.isArray(q.options) && q.options.length === 4 && q.options.every((o) => typeof o === "string" && o.trim()) &&
       Number.isInteger(q.answer) && q.answer >= 0 && q.answer <= 3 &&
       topicIds.has(q.topic)
@@ -60,7 +60,8 @@
     return {
       id: entry.id, folder: entry.folder,
       name: info.name || entry.name, code: info.code || entry.code,
-      subtitle: info.subtitle || "", color: info.color || "", icon: info.icon || "book",
+      // the colour goes into a style attribute, and updates come from the network: hex only
+      subtitle: info.subtitle || "", color: /^#[0-9a-f]{6}$/i.test(info.color) ? info.color : "", icon: info.icon || "book",
       topics, questions,
     };
   }

@@ -42,9 +42,7 @@ public class TimerWidget extends AppWidgetProvider {
         super.onReceive(c, intent);
         String a = intent.getAction();
         if (ACTION_NEXT.equals(a)) {
-            SharedPreferences p = prefs(c);
-            p.edit().putInt("shift", p.getInt("shift", 0) + 1).apply();
-            updateAll(c);
+            next(c);
         } else if (ACTION_TICK.equals(a) || Intent.ACTION_TIME_CHANGED.equals(a) || Intent.ACTION_TIMEZONE_CHANGED.equals(a)) {
             updateAll(c);
         }

@@ -278,7 +278,7 @@ async def run(chrome, shots):
         await s.next(); await s.answer(True)
         fx2 = await page.evaluate("Sound.sfxState()")
         check(fx2 and fx2["kind"] == "correct" and fx2["file"] is None, "a correct answer keeps the built-in sound (Fahh only on failing)")
-        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי"); await s.wait_screen("source")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click('.dim-layer .alert-actions button:text-is("צאי")'); await s.wait_screen("source")
         await page.evaluate("appBack()"); await s.wait_screen("topics")
         await page.evaluate("appBack()"); await s.wait_screen("courses")
 
@@ -342,7 +342,7 @@ async def run(chrome, shots):
         check(await page.evaluate("appBack()") == "handled", "Back while the dialog is open closes it (= keep playing)")
         check(await page.locator(".dim-layer").count() == 0 and await s.screen() == "game", "dialog closed, still in the game")
         await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert")
-        await page.click("text=צאי"); await s.wait_screen("source")
+        await page.click('.dim-layer .alert-actions button:text-is("צאי")'); await s.wait_screen("source")
         check(True, "'צאי' leaves to the source screen")
         await page.evaluate("appBack()"); await s.wait_screen("topics")
         await page.evaluate("appBack()"); await s.wait_screen("courses")
@@ -572,7 +572,7 @@ async def run(chrome, shots):
                     await s.next(); await s.answer(True)          # a streak of 1, so leaving asks first
                     await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert")
                     await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-7-leave-dialog")
-                    await page.click("text=צאי"); await s.wait_screen("source")
+                    await page.click('.dim-layer .alert-actions button:text-is("צאי")'); await s.wait_screen("source")
                 await page.evaluate("appBack()"); await s.wait_screen("topics")
                 await page.evaluate("appBack()"); await s.wait_screen("courses")
             check(not s.problems, f"themes {w}x{hgt}: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
@@ -610,7 +610,7 @@ async def run(chrome, shots):
         await page.evaluate("Sound.resume()")
         await wait_music("m.playing && m.scene === 'game'", "Sound.resume() picks the game music up again")
         await page.evaluate("appBack()"); await page.wait_for_selector(".dim-layer .alert")
-        await page.click("text=צאי"); await s.wait_screen("source")
+        await page.click('.dim-layer .alert-actions button:text-is("צאי")'); await s.wait_screen("source")
         await wait_music("m.scene === 'menu' && m.playing", "leaving the game goes back to menu music")
         await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
         isl = await page.evaluate("(() => { const s = getComputedStyle(document.querySelector('.island')); return +s.opacity; })()")
@@ -722,7 +722,7 @@ async def run(chrome, shots):
         await page.wait_for_timeout(600)
         check(not await page.locator(".rage-fx").count() and not (await page.evaluate("Sound.finalState()"))["on"], "boring mode: no hell mode on stair 19")
         check(await page.evaluate(playing_music) == 0, "boring mode: no music in the game")
-        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click('.dim-layer .alert-actions button:text-is("צאי")')
         await s.wait_screen("source")
         await page.evaluate("Store.mode = 'cool'")
 
@@ -741,7 +741,7 @@ async def run(chrome, shots):
         q1 = await page.get_attribute("[data-card]", "data-qid")
         check(changes == 1 and q1 != q0 and await page.locator("[data-card] .opt:not([disabled])").count() == 4,
               f"a double tap on 'next' moves on exactly one question ({changes} change(s))")
-        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click('.dim-layer .alert-actions button:text-is("צאי")')
         await s.wait_screen("source")
 
         # casual: checkpoints at 5, 10, 15; a wrong answer falls back to the last one
@@ -755,7 +755,7 @@ async def run(chrome, shots):
         await page.wait_for_timeout(1600)
         check(await page.inner_text("[data-num]") == "5", "casual: a wrong answer at stair 7 falls back to the checkpoint at 5")
         check_feet(await ground_report(page), 5, "casual: after the fall")
-        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click("text=צאי")
+        await page.click('[data-act="leave"]'); await page.wait_for_selector(".dim-layer .alert"); await page.click('.dim-layer .alert-actions button:text-is("צאי")')
         await s.wait_screen("source")
         await page.evaluate("Store.difficulty = 'hardcore'")
         check(not s.problems, "music: no console errors" + ("" if not s.problems else ": " + "; ".join(s.problems[:5])))
