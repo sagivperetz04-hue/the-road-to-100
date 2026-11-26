@@ -144,6 +144,9 @@ class Session:
         await page.wait_for_selector(".summit h2", timeout=8000)
         title = await page.inner_text(".summit h2")
         check(title.strip() == SUMMIT_TITLE, f"{label}: reached the summit screen ('{title.strip()}')")
+        st = await page.evaluate("() => { const c = getComputedStyle(document.querySelector('.summit h2')); return { color: c.color, bg: c.backgroundImage, clip: c.backgroundClip || c.webkitBackgroundClip }; }")
+        visible = st["color"] not in ("rgba(0, 0, 0, 0)", "transparent") or ("gradient" in st["bg"] and st["clip"] == "text")
+        check(visible, f"{label}: the summit title can be seen ({st['color']}, clip {st['clip']})")
         return seen
 
 
@@ -301,6 +304,9 @@ async def run(chrome, shots):
                 check(await page.locator(".summit canvas").count() == 1, "confetti show runs on the summit")
                 await page.wait_for_selector(".island.open", timeout=3000)
                 check("6 AM" in await page.inner_text(".island .isl-title"), "the island names the summit music (no clip on top)")
+                sr = await page.text_content(".island .sr-only")
+                check(sr is not None and sr.startswith("מתנגן עכשיו: ") and "6 AM" in sr and await page.get_attribute(".island .isl-text", "aria-hidden") == "true",
+                      f"the island reads as one sentence to screen readers ({sr})")
             if source == "real":
                 check(len(seen) == GOAL and len(set(seen)) == 12, f"real pool of 12 repeats after running out ({len(set(seen))} distinct in {len(seen)})")
             if source == "mixed":
@@ -547,6 +553,11 @@ async def run(chrome, shots):
                 check(await page.locator(".sheet").count() == 0, f"{tag}: Back closes the picker")
                 await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-1-courses")
                 await s.open_course("arch-history-a"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-2-topics")
+                tick = await page.evaluate("() => { const c = document.querySelector('.topic-row.selected .check'); return c ? getComputedStyle(c).backgroundColor : null; }")
+                check(tick not in (None, "rgba(0, 0, 0, 0)"), f"{tag}: a selected topic shows a filled tick ({tick})")
+                if theme == "gallery":
+                    look = await page.evaluate("() => ({ bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(), go: getComputedStyle(document.querySelector('[data-go]')).backgroundColor })")
+                    check(look["bg"].upper() == "#F5F5F7" and look["go"] == "rgb(0, 113, 227)", f"{tag}: the gallery colours are applied ({look})")
                 await page.click("[data-go]"); await s.wait_screen("source"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-3-source")
                 await page.click('.src-card[data-src="generated"]'); await s.wait_screen("game")
                 await page.wait_for_selector("[data-card][data-qid] .opt:not([disabled])")

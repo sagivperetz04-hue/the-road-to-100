@@ -1473,7 +1473,7 @@ html[data-theme="pink"] .home { --sp: var(--accent); }
 input, textarea { caret-color: var(--accent); accent-color: var(--accent); }
 /* line breaks: balanced headings and short centred lines, no lone last word in running copy */
 h1, h2, h3, .q-text, .row-title, .start-q, .wprev .wp-title { text-wrap: balance; }
-.explain, .row-sub, .large-title p, .section-footer, .wnote, .alert p, .res-line { text-wrap: pretty; }
+.explain, .row-sub, .large-title p, .section-footer, .wnote, .alert p, .res-line, .mode-sub { text-wrap: pretty; }
 /* numbers that change in place keep their width */
 .count-badge, .wp-num b, .ring-label b { font-variant-numeric: tabular-nums; }
 /* text for screen readers only */
@@ -1482,3 +1482,6 @@ h1, h2, h3, .q-text, .row-title, .start-q, .wprev .wp-title { text-wrap: balance
 [data-theme="gallery"] .alert-actions button { border-radius: 9999px; box-shadow: none; }
 [data-theme="gallery"] .alert-actions .bold { background: var(--accent); }
 [data-theme="gallery"] .lg.seen, [data-theme="gallery"] .topic-bar .seen { background: #86868B; }
+/* the mode pill keeps the cool mode's fire, but flat like the rest of the gallery */
+[data-theme="gallery"] .mode-pill { box-shadow: 0 0 0 1px var(--hair); font-weight: 600; }
+[data-theme="gallery"] .mode-pill.cool { background: #7A0E00; box-shadow: none; }
