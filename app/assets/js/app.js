@@ -166,6 +166,7 @@
     { id: "light", name: "בהיר", sub: "שמיים כחולים ושמש" },
     { id: "dark", name: "כהה", sub: "לילה, ירח וכוכבים" },
     { id: "pink", name: "ורוד", sub: "קשת, סוכריות וחדי־קרן" },
+    { id: "gallery", name: "גלריה", sub: "לבן ושקט, בסגנון אפל" },
   ];
   function themeSheet() {
     const layer = h(`<div class="dim-layer sheet-layer" role="dialog" aria-modal="true" aria-labelledby="th-t">
@@ -719,7 +720,7 @@
       clearTimeout(islandTimer);
       const content = $(".isl-content", island);
       content.innerHTML = `<span class="isl-art" style="background:${meta.color}">${Icons.note()}</span>
-        <span class="isl-text"><span class="isl-kicker" style="display:block">מתנגן עכשיו</span><span class="isl-title" style="display:block">${ltr(meta.title)}</span></span>
+        <span class="isl-text" aria-hidden="true"><span class="isl-kicker" style="display:block">מתנגן עכשיו</span><span class="isl-title" style="display:block">${ltr(meta.title)}</span></span><span class="sr-only">מתנגן עכשיו: ${esc(meta.title)}</span>
         <span class="eq" style="--isl-color:${meta.color}"><i></i><i></i><i></i><i></i></span>`;
       const top = $(".game-top", el);
       island.classList.add("open"); top.classList.add("island-open");

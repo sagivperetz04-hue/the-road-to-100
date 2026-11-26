@@ -23,6 +23,12 @@
       background: radial-gradient(90% 60% at 50% 42%, #FFFFFF 0%, #EEF3FF 70%); color: #1C1F3A; font-family: system-ui, sans-serif; transition: opacity .35s ease, transform .35s ease; }
     html[data-theme="dark"] #splash { background: radial-gradient(90% 60% at 50% 42%, #2A2F6A 0%, #0E1130 70%); color: #F2F0FF; }
     html[data-theme="pink"] #splash { background: radial-gradient(90% 60% at 50% 42%, #FFFFFF 0%, #FFE3F1 70%); color: #5A1240; }
+    html[data-theme="gallery"] #splash { background: #FFFFFF; color: #1D1D1F; }
+    html[data-theme="gallery"] #splash .sky0, html[data-theme="gallery"] #splash .sky1 { stop-color: #FFFFFF; }
+    html[data-theme="gallery"] #splash .spt-front { fill: #F5F5F7; stroke: #D6D6D6; } html[data-theme="gallery"] #splash .spt-top { fill: #FFFFFF; stroke: #D6D6D6; } html[data-theme="gallery"] #splash .spt-side { fill: #E6E6E8; stroke: #D6D6D6; }
+    html[data-theme="gallery"] #splash .sp-card { box-shadow: 0 0 0 1px #E6E6E8; border-radius: 28px; }
+    html[data-theme="gallery"] #splash .sp-sun, html[data-theme="gallery"] #splash .sp-cloud { display: none; }
+    html[data-theme="gallery"] #splash .sp-mtn { fill: #EDEDF0; } html[data-theme="gallery"] #splash .sp-grass { fill: #F5F5F7; } html[data-theme="gallery"] #splash .sp-grass-top { fill: #D6D6D6; height: 1px; }
     #splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
     #splash .sp-card { width: min(72vw, 300px); border-radius: 26px; overflow: hidden; box-shadow: 0 18px 40px -16px rgba(40, 30, 120, .45), 0 4px 0 rgba(40, 30, 120, .12); animation: sp-in .6s cubic-bezier(.2, .9, .25, 1.05) both; }
     #splash .sp-card svg { display: block; width: 100%; height: auto; }
@@ -64,9 +70,9 @@
         <rect y="-260" width="240" height="440" fill="url(#spSky)"/>
         <g class="sp-sun"><circle cx="196" cy="30" r="20" fill="#FFE27A" opacity=".35"/><circle cx="196" cy="30" r="13" fill="#FFD84D"/></g>
         <g class="sp-cloud" fill="#fff" opacity=".95"><ellipse cx="70" cy="30" rx="16" ry="8"/><ellipse cx="82" cy="25" rx="11" ry="9"/><ellipse cx="150" cy="44" rx="12" ry="6"/><ellipse cx="159" cy="40" rx="8" ry="7"/></g>
-        <path d="M0 160 L60 104 L110 150 L160 96 L240 160Z" fill="#B8C7F0" opacity=".55"/>
+        <path class="sp-mtn" d="M0 160 L60 104 L110 150 L160 96 L240 160Z" fill="#B8C7F0" opacity=".55"/>
         <g class="sp-stairs" stroke-linejoin="round"><path class="spt-side" d="M50 64L56 60V160L50 160Z"/><path class="spt-top" d="M20 64L26 60H56L50 64Z"/><rect class="spt-front" x="20" y="64" width="30" height="96"/><path class="spt-bevel" d="M20.5 64.7H49.5"/><path class="spt-side" d="M80 80L86 76V160L80 160Z"/><path class="spt-top" d="M50 80L56 76H86L80 80Z"/><rect class="spt-front" x="50" y="80" width="30" height="80"/><path class="spt-bevel" d="M50.5 80.7H79.5"/><path class="spt-side" d="M110 96L116 92V160L110 160Z"/><path class="spt-top" d="M80 96L86 92H116L110 96Z"/><rect class="spt-front" x="80" y="96" width="30" height="64"/><path class="spt-bevel" d="M80.5 96.7H109.5"/><path class="spt-side" d="M140 112L146 108V160L140 160Z"/><path class="spt-top" d="M110 112L116 108H146L140 112Z"/><rect class="spt-front" x="110" y="112" width="30" height="48"/><path class="spt-bevel" d="M110.5 112.7H139.5"/><path class="spt-side" d="M170 128L176 124V160L170 160Z"/><path class="spt-top" d="M140 128L146 124H176L170 128Z"/><rect class="spt-front" x="140" y="128" width="30" height="32"/><path class="spt-bevel" d="M140.5 128.7H169.5"/><path class="spt-side" d="M200 144L206 140V160L200 160Z"/><path class="spt-top" d="M170 144L176 140H206L200 144Z"/><rect class="spt-front" x="170" y="144" width="30" height="16"/><path class="spt-bevel" d="M170.5 144.7H199.5"/></g>
-        <rect y="158" width="240" height="22" fill="#8ED48A"/><rect y="158" width="240" height="4" fill="#B7EBA6"/>
+        <rect class="sp-grass" y="158" width="240" height="22" fill="#8ED48A"/><rect class="sp-grass-top" y="158" width="240" height="4" fill="#B7EBA6"/>
         <g class="sp-crown"><path d="M22 58l-3-14 9 7 7-11 7 11 9-7-3 14z" fill="#FFC21A" stroke="#E08A00" stroke-width="1.6" stroke-linejoin="round"/><circle cx="35" cy="51" r="2.2" fill="#FF2D55"/></g>
         <g class="sp-hero">
           <g transform="scale(.21) translate(-60 -118)">

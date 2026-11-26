@@ -534,11 +534,11 @@ async def run(chrome, shots):
             page = await ctx.new_page()
             s = Session(page, answers)
             await page.goto(url); await enter(page)
-            for theme in ("light", "dark", "pink"):
+            for theme in ("light", "dark", "pink", "gallery"):
                 tag = f"{w}x{hgt} {theme}"
                 await page.click('[data-act="theme"]'); await page.wait_for_selector(".sheet .theme-opt")
                 if theme == "light":
-                    check(await page.locator(".theme-opt").count() == 4, "theme picker offers 4 choices")
+                    check(await page.locator(".theme-opt").count() == 5, "theme picker offers 5 choices")
                     await shot_page(page, shots, f"theme-{w}x{hgt}-picker")
                 await page.click(f'.theme-opt[data-theme-opt="{theme}"]')
                 check(await page.get_attribute("html", "data-theme") == theme, f"{tag}: picking it sets the theme")

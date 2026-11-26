@@ -1,8 +1,8 @@
-/* Themes: "auto" (follows the phone), "light", "dark", "pink". Stored with the rest of the settings in stairs.v1.
+/* Themes: "auto" (follows the phone), "light", "dark", "pink", "gallery" (white gallery, Apple-style). Stored with the rest of the settings in stairs.v1.
    The resolved theme is set as <html data-theme="light|dark|pink">; CSS and the scene take their colours from it. */
 (function () {
-  const THEMES = ["auto", "light", "dark", "pink"];
-  const BARS = { light: "#EEF3FF", dark: "#0E1130", pink: "#FFE3F1" };
+  const THEMES = ["auto", "light", "dark", "pink", "gallery"];
+  const BARS = { light: "#EEF3FF", dark: "#0E1130", pink: "#FFE3F1", gallery: "#F5F5F7" };
   const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   const listeners = [];
 
