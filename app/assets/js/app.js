@@ -720,7 +720,7 @@
       clearTimeout(islandTimer);
       const content = $(".isl-content", island);
       content.innerHTML = `<span class="isl-art" style="background:${meta.color}">${Icons.note()}</span>
-        <span class="isl-text"><span class="isl-kicker" style="display:block">מתנגן עכשיו</span><span class="isl-title" style="display:block">${ltr(meta.title)}</span></span>
+        <span class="isl-text" aria-hidden="true"><span class="isl-kicker" style="display:block">מתנגן עכשיו</span><span class="isl-title" style="display:block">${ltr(meta.title)}</span></span><span class="sr-only">מתנגן עכשיו: ${esc(meta.title)}</span>
         <span class="eq" style="--isl-color:${meta.color}"><i></i><i></i><i></i><i></i></span>`;
       const top = $(".game-top", el);
       island.classList.add("open"); top.classList.add("island-open");
