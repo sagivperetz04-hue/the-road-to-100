@@ -557,6 +557,8 @@ async def run(chrome, shots):
                     check(n_uni >= 2 and n_lol >= 3 and await page.locator("[data-scene] .rainbow").count() == 1, f"{tag}: rainbow, {n_uni} unicorns, {n_lol} lollipops")
                 await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-4-game")
                 await s.answer(True); await page.wait_for_selector("[data-foot].show"); await explain_clear(page, f"{tag} correct"); await shot_page(page, shots, f"theme-{w}x{hgt}-{theme}-5-correct")
+                bg = await page.evaluate("() => { const l = document.querySelector('[data-card] .opt.correct .opt-letter'); return l ? getComputedStyle(l).backgroundColor : null; }")
+                check(bg not in (None, "rgb(255, 255, 255)", "rgba(0, 0, 0, 0)"), f"{tag}: the correct answer's letter takes the correct colour ({bg})")
                 check_feet(await ground_report(page), 1, f"{tag}: after a correct answer")
                 await s.next(); await s.answer(False); await page.wait_for_selector("[data-foot].show")
                 await explain_clear(page, f"{tag} wrong")
@@ -859,6 +861,15 @@ async def run(chrome, shots):
         await ctx.close()
         ihttpd.shutdown()
         shutil.rmtree(isite, ignore_errors=True)
+
+        # ---------------------------------------------------------------- a damaged save still opens the app
+        print("\n[damaged save]")
+        ctx = await browser.new_context(viewport={"width": 393, "height": 851})
+        await ctx.add_init_script("window.__noDataUpdates = true; if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('stairs.v1', JSON.stringify({ courses: { 'fixture-course': 5, x: [1] }, lv: 1 })); }")
+        page = await ctx.new_page()
+        await page.goto(url); await enter(page)
+        check(await page.locator(".course-row").count() > 0, "a save with broken course entries still opens the courses")
+        await ctx.close()
 
         # ---------------------------------------------------------------- home-screen widget: settings page (browser fallback)
         print("\n[widget settings]")

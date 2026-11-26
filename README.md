@@ -202,17 +202,20 @@ explanations. The last 10 results per course are kept (`checks` in `stairs.v1`) 
 
 ## Themes
 
-Four themes, picked with the palette button on the first screen and saved with the progress: **auto** (follows the
-phone's dark mode, through `AndroidBridge.isNightMode()`), **light**, **dark** and **pink** (sunshine, rainbow,
-lollipops and unicorns). The theme is set as `<html data-theme="light|dark|pink">`:
+Five themes, picked with the palette button on the first screen and saved with the progress: **auto** (follows the
+phone's dark mode, through `AndroidBridge.isNightMode()`), **light**, **dark**, **pink** (sunshine, rainbow,
+lollipops and unicorns) and **gallery** (a quiet white gallery: ink type, one blue for actions, flat surfaces with
+hairlines, a white studio with silver stairs). The theme is set as `<html data-theme="light|dark|pink|gallery">`:
 
 - `css/app.css`: colour tokens per theme at the top; every component uses them;
 - `js/art.js`: the drawings and `Art.PALETTES` (scene, banner and picker colours);
 - `js/scene.js`: draws the staircase world in the current theme;
 - `js/theme.js`: the setting, the "auto" logic, and Android's status/navigation bar colours.
 
-To add a theme: add a `[data-theme="name"]` token block in `app.css`, a palette in `Art.PALETTES`, a colour in
-`BARS` in `theme.js`, and an entry in `THEME_INFO` in `app.js`. The e2e test screenshots every screen in every
+To add a theme (six places): a `[data-theme="name"]` token block in `app.css`, a palette in `Art.PALETTES`
+(`art.js`), the monster and stair materials in `MAT` (`scene.js`), the loading screen's colours in the
+`html[data-theme="name"] #splash` rules in `index.html` (they paint before any script runs), a colour in `BARS` in
+`theme.js`, and an entry in `THEME_INFO` in `app.js`. The e2e test screenshots every screen in every
 theme (`build/screenshots/theme-*`).
 
 ## Start screen, modes and difficulty
@@ -221,7 +224,7 @@ The loading screen turns into the start screen: the sky card shrinks to the top,
 says a line of the day (`LINES` in `app.js`, picked by date), and the two modes rise below. The last-used mode is
 the big card. Three independent settings (all in `stairs.v1`):
 
-- **Theme** (`settings.theme`): light, dark, pink; colours, materials and scenery.
+- **Theme** (`settings.theme`): light, dark, pink, gallery; colours, materials and scenery.
 - **Presentation mode** (`settings.mode`): **משעמם** (`boring`) is the calm miniature world: no music, golden
   light instead of hell on stair 19, drifting stars on the summit, no bobbing. **למגניבים בלבד** (`cool`): music,
   hell mode on stair 19, beat-synced confetti. The "מצב" pill on the courses screen opens the start screen again.
@@ -280,11 +283,11 @@ A 4x2 widget (resizable): a timer toward a goal date and a sentence of the day n
 
 ```bash
 tools/build.sh --debuggable                       # debug build: WebView open to Chrome DevTools
-adb install -r build/outputs/the-road-to-100-v4.8-14-debug.apk
+adb install -r build/outputs/the-road-to-100-v4.9-15-debug.apk
 python3 tests/device_test.py                      # drives the real app: ground, climb, fall, summit, progress
 ```
 
-Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.8-14.apk`); both are signed with
+Install the release APK again afterwards (`adb install -r build/outputs/the-road-to-100-v4.9-15.apk`); both are signed with
 the same key, so progress is kept. UI and design notes from device testing: `docs/ui-design-notes.md`.
 
 Emulator on Windows with Hyper-V (AMD CPU and GPU): keep the SDK and AVDs in English-only paths

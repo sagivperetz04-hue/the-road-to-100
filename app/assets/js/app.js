@@ -166,7 +166,7 @@
     { id: "light", name: "בהיר", sub: "שמיים כחולים ושמש" },
     { id: "dark", name: "כהה", sub: "לילה, ירח וכוכבים" },
     { id: "pink", name: "ורוד", sub: "קשת, סוכריות וחדי־קרן" },
-    { id: "gallery", name: "גלריה", sub: "לבן ושקט, בסגנון אפל" },
+    { id: "gallery", name: "גלריה", sub: "לבן ושקט, כמו גלריה" },
   ];
   function themeSheet() {
     const layer = h(`<div class="dim-layer sheet-layer" role="dialog" aria-modal="true" aria-labelledby="th-t">
@@ -719,9 +719,10 @@
       if (!meta) return;
       clearTimeout(islandTimer);
       const content = $(".isl-content", island);
-      content.innerHTML = `<span class="isl-art" style="background:${meta.color}">${Icons.note()}</span>
+      const color = /^#[0-9a-f]{6}$/i.test(meta.color) ? meta.color : "#30D158";   // goes into style attributes: hex only
+      content.innerHTML = `<span class="isl-art" style="background:${color}">${Icons.note()}</span>
         <span class="isl-text" aria-hidden="true"><span class="isl-kicker" style="display:block">מתנגן עכשיו</span><span class="isl-title" style="display:block">${ltr(meta.title)}</span></span><span class="sr-only">מתנגן עכשיו: ${esc(meta.title)}</span>
-        <span class="eq" style="--isl-color:${meta.color}"><i></i><i></i><i></i><i></i></span>`;
+        <span class="eq" style="--isl-color:${color}"><i></i><i></i><i></i><i></i></span>`;
       const top = $(".game-top", el);
       island.classList.add("open"); top.classList.add("island-open");
       islandTimer = setTimeout(() => { island.classList.remove("open"); top.classList.remove("island-open"); }, 5000);

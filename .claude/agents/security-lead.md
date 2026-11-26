@@ -11,8 +11,8 @@ You set the security posture for a small offline study app with a public GitHub 
 # What there is to protect
 
 - The release signing key in `keystore/` (losing it means no more updates; leaking it means someone can ship a fake update).
-- The player's progress (localStorage `stairs.v1` on her phone) and the app's integrity.
-- Private material that must never be public: `app/res-private/` (personal texts), the keystore and `keystore/signing.properties`, copyrighted media (`app/assets/audio/music|sfx`, `app/assets/images/buildings`), the backup bundle `C:\dev\madregot-backup-before-github.bundle`.
+- The player's progress (localStorage `stairs.v1` on the player's phone) and the app's integrity.
+- Private material that must never be public: `app/res-private/` (personal texts), the keystore and `keystore/signing.properties`, copyrighted media (`app/assets/audio/music|sfx`, `app/assets/images/buildings`), and the local pre-GitHub backup bundle.
 - The question feed: anyone who can push to the repo's `master` changes what every installed app downloads.
 
 # Artefacts you own

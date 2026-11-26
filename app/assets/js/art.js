@@ -121,8 +121,9 @@
     pink: { sky: ["#FF9ECF", "#FFC8E2", "#FFF0F7"], far: ["#FFB5DA", "#F79CCB"], grass: ["#A8F0C2", "#73D79C"], grassTop: "#DFFFEA",
       step: ["#FFF1F8", "#FFC4E1"], stepTop: "#FFFFFF", stepEdge: "rgba(214,60,140,.28)", stepText: "rgba(190,40,120,.75)",
       bush: ["#FF6FB5", "#FFD84D"], cloud: "#FFFFFF", cloudOpacity: .95 },
-    gallery: { sky: ["#FFFFFF", "#FFFFFF", "#FFFFFF"], far: ["#F5F5F7", "#EDEDF0"], grass: ["#F5F5F7", "#F5F5F7"], grassTop: "#D6D6D6",
-      step: ["#FFFFFF", "#F5F5F7"], stepTop: "#FFFFFF", stepEdge: "#D6D6D6", stepText: "#86868B",
+    // gallery: keep in sync with MAT.gallery (scene.js) and the splash rules in index.html
+    gallery: { sky: ["#FFFFFF", "#FFFFFF", "#FFFFFF"], far: ["#F5F5F7", "#EDEDF0"], grass: ["#FFFFFF", "#FFFFFF"], grassTop: "#D6D6D6",
+      step: ["#FFFFFF", "#F5F5F7"], stepTop: "#FFFFFF", stepEdge: "#D6D6D6", stepText: "#6E6E73",
       bush: ["#F5F5F7", "#F5F5F7"], cloud: "#FFFFFF", cloudOpacity: 0 },
   };
 

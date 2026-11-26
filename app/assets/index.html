@@ -23,12 +23,13 @@
       background: radial-gradient(90% 60% at 50% 42%, #FFFFFF 0%, #EEF3FF 70%); color: #1C1F3A; font-family: system-ui, sans-serif; transition: opacity .35s ease, transform .35s ease; }
     html[data-theme="dark"] #splash { background: radial-gradient(90% 60% at 50% 42%, #2A2F6A 0%, #0E1130 70%); color: #F2F0FF; }
     html[data-theme="pink"] #splash { background: radial-gradient(90% 60% at 50% 42%, #FFFFFF 0%, #FFE3F1 70%); color: #5A1240; }
+    /* gallery: keep in sync with MAT.gallery (scene.js) and PALETTES.gallery (art.js) */
     html[data-theme="gallery"] #splash { background: #FFFFFF; color: #1D1D1F; }
     html[data-theme="gallery"] #splash .sky0, html[data-theme="gallery"] #splash .sky1 { stop-color: #FFFFFF; }
     html[data-theme="gallery"] #splash .spt-front { fill: #F5F5F7; stroke: #D6D6D6; } html[data-theme="gallery"] #splash .spt-top { fill: #FFFFFF; stroke: #D6D6D6; } html[data-theme="gallery"] #splash .spt-side { fill: #E6E6E8; stroke: #D6D6D6; }
     html[data-theme="gallery"] #splash .sp-card { box-shadow: 0 0 0 1px #E6E6E8; border-radius: 28px; }
-    html[data-theme="gallery"] #splash .sp-sun, html[data-theme="gallery"] #splash .sp-cloud { display: none; }
-    html[data-theme="gallery"] #splash .sp-mtn { fill: #EDEDF0; } html[data-theme="gallery"] #splash .sp-grass { fill: #F5F5F7; } html[data-theme="gallery"] #splash .sp-grass-top { fill: #D6D6D6; height: 1px; }
+    html[data-theme="gallery"] #splash .sp-sun, html[data-theme="gallery"] #splash .sp-cloud, html[data-theme="gallery"] #splash .sp-mtn { display: none; }
+    html[data-theme="gallery"] #splash .sp-mtn { fill: #EDEDF0; } html[data-theme="gallery"] #splash .sp-grass { fill: #FFFFFF; } html[data-theme="gallery"] #splash .sp-grass-top { fill: #D6D6D6; height: 1px; }
     #splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
     #splash .sp-card { width: min(72vw, 300px); border-radius: 26px; overflow: hidden; box-shadow: 0 18px 40px -16px rgba(40, 30, 120, .45), 0 4px 0 rgba(40, 30, 120, .12); animation: sp-in .6s cubic-bezier(.2, .9, .25, 1.05) both; }
     #splash .sp-card svg { display: block; width: 100%; height: auto; }

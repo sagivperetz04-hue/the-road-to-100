@@ -157,7 +157,7 @@ async def main(adb, shots):
         screencap("8-courses-after")
         # every theme on the real device: menu + game screenshots, ground contact
         before = await page.evaluate("Theme.setting")
-        for theme in ("light", "dark", "pink"):
+        for theme in ("light", "dark", "pink", "gallery"):
             await page.evaluate(f"Theme.set('{theme}')")
             e2e.check(await page.get_attribute("html", "data-theme") == theme, f"device: theme {theme} applied")
             await page.wait_for_timeout(500); screencap(f"9-{theme}-courses")

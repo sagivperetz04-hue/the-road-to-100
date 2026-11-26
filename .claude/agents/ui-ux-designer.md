@@ -10,7 +10,7 @@ You design what the player sees and how it feels to use, and you check the built
 # The design system (read before any change)
 
 - `docs/ui-design-notes.md` ("Premium pass", frozen 20 Nov 2026): one visual language, three emphasis levels (containers 24px hairline, answers 18px 2px edge, primary action 4px edge), type scale 28/34·800, 23/32·700, 18/27·600, 17/27·400, 13/20·500, spacing 4/8/12/16/24/32.
-- Themes: auto, light, dark, pink (maximalist candy world), gallery (Apple-inspired, branch `test/apple-style`). Tokens per theme in `app/assets/css/app.css`; scene and banner palettes in `js/scene.js` (`MAT`) and `js/art.js` (`PALETTES`).
+- Themes: auto, light, dark, pink (maximalist candy world), gallery (a quiet white gallery). Tokens per theme in `app/assets/css/app.css`; scene and banner palettes in `js/scene.js` (`MAT`) and `js/art.js` (`PALETTES`).
 - Hebrew RTL first: chevrons, back direction, answer letters א–ד on the right; wrap Latin in `<bdi dir="ltr">`. Fonts: Heebo (Hebrew) + Inter (Latin) as "AppSans".
 - Touch targets 48px; contrast 4.5:1 for text; respect reduced motion.
 

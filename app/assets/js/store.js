@@ -15,7 +15,9 @@
     } catch (e) { data = null; }
     const existing = !!(data && typeof data === "object" && data.courses && Object.keys(data.courses).length);
     if (!data || typeof data !== "object") data = {};
-    data.courses = data.courses || {};
+    // a damaged save must not lock the app on the loading screen: keep only course entries that are objects
+    data.courses = data.courses && typeof data.courses === "object" && !Array.isArray(data.courses) ? data.courses : {};
+    Object.keys(data.courses).forEach((cid) => { const c = data.courses[cid]; if (!c || typeof c !== "object" || Array.isArray(c)) delete data.courses[cid]; });
     data.q = data.q || {};
     // learning state per question id: { d: due time, s: step, a: anchor (a correct answer), r: recalled later, l: last seen }
     data.L = data.L && typeof data.L === "object" ? data.L : {};
