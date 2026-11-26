@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         // Debug builds only (tools/build.sh --debuggable): lets Chrome DevTools / tests drive the WebView over adb.
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(this);
-        web.setBackgroundColor(BG);
+        web.setBackgroundColor(lastBg());
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
         web.setHorizontalScrollBarEnabled(false);
@@ -138,8 +138,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Start in the colours the page last asked for, so a dark theme doesn't open with a light flash. */
     private void styleSystemBars() {
-        applyBars(BG, true);
+        int bg = lastBg();
+        getWindow().getDecorView().setBackgroundColor(bg);
+        applyBars(bg, getSharedPreferences("ui", MODE_PRIVATE).getBoolean("darkIcons", true));
+    }
+
+    private int lastBg() {
+        return getSharedPreferences("ui", MODE_PRIVATE).getInt("bg", BG);
     }
 
     @SuppressWarnings("deprecation")
@@ -256,6 +263,7 @@ public class MainActivity extends Activity {
                 try { c = Color.parseColor(hex); } catch (IllegalArgumentException e) { return; }
                 applyBars(c, darkIcons);
                 if (web != null) web.setBackgroundColor(c);
+                getSharedPreferences("ui", MODE_PRIVATE).edit().putInt("bg", c).putBoolean("darkIcons", darkIcons).apply();
             });
         }
 
