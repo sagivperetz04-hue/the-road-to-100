@@ -22,7 +22,7 @@ Prefer:
 ```
 app/
   assets/            # the web app: index.html, css/, js/, data/ (questions), audio/ (manifest + mp3s), fonts/
-  java/              # MainActivity (WebView host + JS bridge), Reminders (daily notifications)
+  java/              # MainActivity (WebView host + JS bridge), Reminders (daily notifications), TimerWidget (home-screen widget)
   res/               # icons, strings, styles (values-v31 = Android 12+ splash)
   AndroidManifest.xml
   version.properties # versionCode / versionName
@@ -38,7 +38,7 @@ keystore/            # release signing key (never regenerate; updates must keep 
 build/outputs/       # APKs (git-ignored)
 ```
 
-Environment facts: Android SDK at `C:\Android\sdk` (build-tools 35.0.0); emulator AVD `madregot_test` must run with `-cores 1` and `-feature -WiFiPacketStream,-Uwb,-NetsimWebUi,-NetsimCliUi,-Vulkan`; Python venv at `.venv`. The git repo is local (branch `master`, no remote yet).
+Environment facts: Android SDK at `C:\Android\sdk` (build-tools 35.0.0); emulator AVD `madregot_test` must run with `-cores 1` and `-feature -WiFiPacketStream,-Uwb,-NetsimWebUi,-NetsimCliUi,-Vulkan`; Python venv at `.venv`. The repo is on GitHub (`sagivperetz04-hue/the-road-to-100`, branch `master`); installed apps download question data from it (README "Question updates without a new APK"), so a push to `master` under `app/assets/data/` reaches players.
 
 # Authoritative Files — Read Before Changing the Pipeline
 
@@ -93,6 +93,6 @@ Always show the command and wait for the user to run it or to say so explicitly:
 
 # CI (if/when added)
 
-- GitHub Actions only after the user asks for it and a remote exists.
+- GitHub Actions only after the user asks for it. Use the `ci-cd-and-automation` and `git-workflow-and-versioning` skills, adapted to this repo (no npm, no Gradle).
 - Every `uses:` line pinned to a full commit SHA resolved live through the GitHub API (`releases/latest` → tag ref → commit), written as `uses: owner/action@<sha>  # <tag>`. Never a floating tag, never a SHA from memory.
 - Signing secrets come from repository secrets, never from the repo.
