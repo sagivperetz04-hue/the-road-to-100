@@ -14,6 +14,9 @@
       top: "#FFF2D2", frontHi: "#EBD7AE", frontLow: "#DCC18F", side: "#BA9969", outline: "#CBB282", bevel: "#FFF9E9", seam: "#846440" },
     pink: { mHi: "#FFC0EB", mMid: "#D66AD8", mLow: "#8E3CA9", sheen: "#FFF5FC", rim: "#FFE0A8", hornHi: "#FFF1B3", hornLow: "#EDAF53", eye: "#FFFEFA", face: "#49213E", cheek: "#FF91BF", contact: "#65264F",
       top: "#FFF6FC", frontHi: "#F5BEDF", frontLow: "#E69BC8", side: "#BC72A5", outline: "#CD8EB7", bevel: "#FFFFFF", seam: "#87476F" },
+    // gallery: the monster is the product on show; the stairs are a white plinth with silver hairlines
+    gallery: { mHi: "#E1B7FF", mMid: "#AC60E2", mLow: "#713AA7", sheen: "#FFFFFF", rim: "#E6C6FF", hornHi: "#FFE99A", hornLow: "#DDA536", eye: "#FFFEFA", face: "#30203F", cheek: "#F385CD", contact: "#1D1D1F",
+      top: "#FFFFFF", frontHi: "#FAFAFC", frontLow: "#F5F5F7", side: "#E6E6E8", outline: "#D6D6D6", bevel: "#FFFFFF", seam: "#86868B" },
     dark: { mHi: "#C6BCFF", mMid: "#9275DE", mLow: "#4F3C8D", sheen: "#E9F3FF", rim: "#AFCBFF", hornHi: "#EEE4BE", hornLow: "#AA956B", eye: "#F3F5FF", face: "#211A38", cheek: "#CA8BDC", contact: "#050611",
       top: "#A9B3D7", frontHi: "#65729A", frontLow: "#4D587E", side: "#343E62", outline: "#485478", bevel: "#D3DFFF", seam: "#18213D" },
   };
@@ -78,6 +81,7 @@
       ? `<g transform="translate(296 62)">${Art.moon(16)}</g>` + [[40, 30, 2.6], [110, 72, 2], [160, 22, 3], [212, 50, 2.2], [250, 18, 2.6], [350, 96, 2], [20, 100, 1.8], [190, 104, 1.6], [372, 40, 2.4]].map(([x, y, r]) => Art.star(x, y, r)).join("")
       : theme === "pink"
         ? `<g transform="translate(298 66)">${Art.sunny(17)}</g>`
+        : theme === "gallery" ? ""
         : `<circle cx="298" cy="62" r="46" fill="url(#sunGlow)"/><circle cx="298" cy="62" r="17" fill="#FFE066"/>`;
     svg.innerHTML = `
       <defs>${Art.DEFS}
@@ -107,7 +111,7 @@
       deco.innerHTML = [[142, "#FF4FA3", "#FFFFFF", 9, 24], [190, "#A77BFF", "#FFD84D", 8, 20], [300, "#FFB020", "#FF4FA3", 10, 28], [-1080, "#3BA4F0", "#FFFFFF", 9, 24]]
         .map(([x, c1, c2, r, h]) => `<g transform="translate(${x} ${GROUND})">${Art.lollipop({ r, h, c1, c2 })}</g>`).join("")
         + `<g transform="translate(78 ${GROUND})">${Art.unicorn({ scale: .82 })}</g>`;
-    } else {
+    } else if (theme !== "gallery") {
       deco.innerHTML = [[70, 1], [150, .8], [-1080, .9], [300, 1.1]].map(([bx, s]) =>
         `<g transform="translate(${bx} ${GROUND}) scale(${s})"><ellipse cx="0" cy="-6" rx="14" ry="7" fill="${P.bush[0]}"/><ellipse cx="10" cy="-8" rx="9" ry="8" fill="${P.bush[1]}"/><ellipse cx="-9" cy="-7" rx="8" ry="7" fill="${P.bush[1]}"/></g>`).join("")
         + (theme === "dark" ? [[40, -14], [96, -26], [180, -12], [250, -30]].map(([x, y]) => `<circle class="twinkle" style="animation-delay:-${(x % 7) / 3}s" cx="${x}" cy="${y}" r="1.6" fill="#FFF3A0"/>`).join("") : "");
@@ -147,7 +151,7 @@
         t.textContent = String(i);
         if (casual) {
           const m = el("g", { class: "checkpoint", "data-step": i, transform: `translate(${p.x - W / 2 + 5} ${p.y})` }, world);
-          m.innerHTML = `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="${theme === "dark" ? "#C3C5EC" : "#8A7354"}"/>
+          m.innerHTML = `<rect x="-.8" y="-22" width="1.6" height="22" rx=".8" fill="${theme === "dark" ? "#C3C5EC" : theme === "gallery" ? "#1D1D1F" : "#8A7354"}"/>
             <g class="pennant"><path d="M.8 -21.5 L15 -17 L.8 -12.5 Z" fill="${color}"/><path class="cp-check" d="M4.2 -17.2 l1.8 1.8 3.4 -3.6" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></g>`;
           flags.push(m);
         }
@@ -155,7 +159,7 @@
     }
     // summit flag (and, in pink, a unicorn waiting at the top)
     const flag = el("g", { class: "flag", transform: `translate(${top.x - 40} ${top.y})` }, world);
-    flag.innerHTML = `<rect x="-1.2" y="-62" width="2.4" height="62" rx="1.2" fill="${theme === "dark" ? "#C3C5EC" : "#6E5A40"}"/>
+    flag.innerHTML = `<rect x="-1.2" y="-62" width="2.4" height="62" rx="1.2" fill="${theme === "dark" ? "#C3C5EC" : theme === "gallery" ? "#1D1D1F" : "#6E5A40"}"/>
       <path class="flag-cloth" d="M1 -61 C12 -65 20 -55 32 -59 L32 -41 C20 -37 12 -47 1 -43 Z" fill="${color}"/>
       <circle cx="0" cy="-63" r="2.8" fill="#FFD60A"/>`;
     if (theme === "pink") {

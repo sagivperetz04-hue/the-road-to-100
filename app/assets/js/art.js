@@ -121,6 +121,9 @@
     pink: { sky: ["#FF9ECF", "#FFC8E2", "#FFF0F7"], far: ["#FFB5DA", "#F79CCB"], grass: ["#A8F0C2", "#73D79C"], grassTop: "#DFFFEA",
       step: ["#FFF1F8", "#FFC4E1"], stepTop: "#FFFFFF", stepEdge: "rgba(214,60,140,.28)", stepText: "rgba(190,40,120,.75)",
       bush: ["#FF6FB5", "#FFD84D"], cloud: "#FFFFFF", cloudOpacity: .95 },
+    gallery: { sky: ["#FFFFFF", "#FFFFFF", "#FFFFFF"], far: ["#F5F5F7", "#EDEDF0"], grass: ["#F5F5F7", "#F5F5F7"], grassTop: "#D6D6D6",
+      step: ["#FFFFFF", "#F5F5F7"], stepTop: "#FFFFFF", stepEdge: "#D6D6D6", stepText: "#86868B",
+      bush: ["#F5F5F7", "#F5F5F7"], cloud: "#FFFFFF", cloudOpacity: 0 },
   };
 
   /** The first-screen banner: sky, a few stairs and the climber, in the given theme. */
@@ -129,7 +132,8 @@
     const P = PALETTES[theme] || PALETTES.light;
     const u = `bn${++bannerN}`;   // gradient ids must be unique: several banners can be on screen at once
     // stairs rise to the left, like the game's staircase (RTL)
-    const stairs = [0, 1, 2, 3].map((i) => `<rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="${i * 16 + 40}" rx="3" fill="url(#${u}Step)"/><rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="4" rx="2" fill="${P.stepTop}"/>`).join("");
+    const edge = theme === "gallery" ? ` stroke="${P.stepEdge}" stroke-width=".8"` : "";   // white stairs on white need a hairline
+    const stairs = [0, 1, 2, 3].map((i) => `<rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="${i * 16 + 40}" rx="3" fill="url(#${u}Step)"${edge}/><rect x="${134 - i * 30}" y="${118 - i * 16}" width="30" height="4" rx="2" fill="${P.stepTop}"/>`).join("");
     let extra = "", front = "";   // extra: in the sky, behind the hills; front: standing on the grass, drawn last
     if (theme === "dark") {
       extra = `<g transform="translate(330 42)">${moon(15)}</g>` + [[30, 20, 3], [120, 30, 2.4], [160, 16, 3.2], [200, 44, 2], [330, 22, 2.6], [372, 52, 2.2], [98, 66, 1.8], [250, 30, 2]].map(([x, y, s]) => star(x, y, s)).join("");
@@ -138,10 +142,10 @@
         + heart(150, 40, 1, "#FF6FB5") + heart(270, 22, .8, "#FFFFFF") + heart(300, 86, .7, "#FF8FC6");
       front = `<g transform="translate(250 135)">${unicorn({ scale: .95 })}</g>`
         + `<g transform="translate(376 135)">${lollipop({ r: 8, h: 18, c1: "#FF4FA3" })}</g><g transform="translate(190 135)">${lollipop({ r: 7, h: 14, c1: "#A77BFF", c2: "#FFD84D" })}</g>`;
-    } else {
+    } else if (theme !== "gallery") {
       extra = `<g transform="translate(334 44)"><circle r="40" fill="url(#sunGlow)"/><circle r="16" fill="#FFE066"/></g>`;
     }
-    const clouds = theme === "dark" ? "" : [[200, 34, .8], [120, 26, .6], [36, 30, .7]].map(([x, y, s]) => `<g transform="translate(${x} ${y}) scale(${s})" opacity="${P.cloudOpacity}"><ellipse rx="24" ry="9" fill="${P.cloud}"/><ellipse cx="12" cy="-6" rx="14" ry="10" fill="${P.cloud}"/><ellipse cx="-10" cy="-4" rx="11" ry="7" fill="${P.cloud}"/></g>`).join("");
+    const clouds = theme === "dark" || theme === "gallery" ? "" : [[200, 34, .8], [120, 26, .6], [36, 30, .7]].map(([x, y, s]) => `<g transform="translate(${x} ${y}) scale(${s})" opacity="${P.cloudOpacity}"><ellipse rx="24" ry="9" fill="${P.cloud}"/><ellipse cx="12" cy="-6" rx="14" ry="10" fill="${P.cloud}"/><ellipse cx="-10" cy="-4" rx="11" ry="7" fill="${P.cloud}"/></g>`).join("");
     return `<svg class="banner-art" viewBox="0 0 400 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
       <defs>${DEFS}<linearGradient id="${u}Sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".7" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
         <linearGradient id="${u}Step" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.step[0]}"/><stop offset="1" stop-color="${P.step[1]}"/></linearGradient>

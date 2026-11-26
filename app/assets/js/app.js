@@ -166,6 +166,7 @@
     { id: "light", name: "בהיר", sub: "שמיים כחולים ושמש" },
     { id: "dark", name: "כהה", sub: "לילה, ירח וכוכבים" },
     { id: "pink", name: "ורוד", sub: "קשת, סוכריות וחדי־קרן" },
+    { id: "gallery", name: "גלריה", sub: "לבן ושקט, בסגנון אפל" },
   ];
   function themeSheet() {
     const layer = h(`<div class="dim-layer sheet-layer" role="dialog" aria-modal="true" aria-labelledby="th-t">

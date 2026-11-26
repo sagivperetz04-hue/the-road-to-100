@@ -1416,3 +1416,65 @@ html[data-theme="pink"] .home { --sp: var(--accent); }
 .wprev.pro .wp-sentence { padding-inline-start: .875em; margin-inline-start: .875em; box-shadow: inset -1px 0 0 #2A3346; color: #E9EDF5; }
 .wprev.pro .wp-sentence small { color: #6B7890; }
 @media (prefers-reduced-motion: reduce) { .wset-layer { animation: none; } }
+
+/* ==========================================================================================
+   GALLERY THEME (branch test/apple-style): inspired by Apple's product pages, not a copy.
+   White gallery and #F5F5F7 bands, ink type at 600 with tight tracking, one blue for actions,
+   flat surfaces (1px hairlines instead of lips and shadows), 28px cards, pill buttons.
+   The monster and the course colours stay: they are the "product" on show.
+   ========================================================================================== */
+[data-theme="gallery"] {
+  --bg: #F5F5F7; --pattern: none; --card: #FFFFFF;
+  --label: #1D1D1F; --label2: #6E6E73; --label3: #86868B;
+  --edge: #E6E6E8; --hair: #E6E6E8; --shadow: transparent; --sep: #D6D6D6; --fill: #E8E8ED;
+  --blue: #0066CC;
+  --accent: #0071E3; --accent-2: #0071E3; --accent-edge: #0071E3; --on-accent: #FFFFFF; --accent-soft: rgba(0, 113, 227, .1);
+  --green: #248A3D; --good-bg: #EEF8F0; --good-edge: #C9E9D0; --good-text: #1B7A33;
+  --red: #D70015;   --bad-bg: #FFF0F1;  --bad-edge: #F5C6CB;  --bad-text: #B3001B;
+  --opt: #F5F5F7; --opt-edge: transparent; --opt-press: #E8E8ED; --badge-bg: #F5F5F7; --badge-fg: #1D1D1F;
+  --nav-bg: rgba(250, 250, 252, .8); --game-bg: #FFFFFF; --hud: rgba(255, 255, 255, .86);
+  --banner-edge: transparent; --summit-bg: #FFFFFF; --title-grad: linear-gradient(#1D1D1F, #1D1D1F);
+  --rays: transparent; --kicker: #B64400;
+  --radius: 28px;
+  --lift: 0 0 0 1px #E6E6E8; --lift-pressed: 0 0 0 1px #D6D6D6;
+  color-scheme: light;
+}
+[data-theme="gallery"] body { letter-spacing: -.2px; }
+/* flat: no embossed text, no gloss highlights */
+[data-theme="gallery"] *, [data-theme="gallery"] *::before { text-shadow: none !important; }
+[data-theme="gallery"] .btn-primary::before, [data-theme="gallery"] .icon-tile::before { display: none; }
+
+/* type: compact display headings, quiet secondary copy */
+[data-theme="gallery"] .large-title h1 { font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -.6px; }
+[data-theme="gallery"] .large-title p { font-size: 15px; font-weight: 400; color: var(--label2); }
+[data-theme="gallery"] .row-title { font-weight: 600; letter-spacing: -.3px; }
+[data-theme="gallery"] .q-text { font-weight: 600; letter-spacing: -.4px; }
+
+/* controls: the blue pill is the only filled action; secondary actions are outlined pills; nav is unboxed */
+[data-theme="gallery"] .btn-primary { background: #0071E3; border-radius: 9999px; box-shadow: none; font-weight: 600; letter-spacing: -.3px; }
+[data-theme="gallery"] .btn-primary:active { transform: scale(.98); box-shadow: none; background: #0068D1; }
+[data-theme="gallery"] .btn-primary:disabled { background: #E8E8ED; color: #86868B; box-shadow: none; }
+[data-theme="gallery"] .btn-secondary { background: transparent; color: #1D1D1F; border-radius: 9999px; box-shadow: inset 0 0 0 1px #86868B; font-weight: 500; }
+[data-theme="gallery"] .btn-secondary:active { transform: scale(.98); box-shadow: inset 0 0 0 1px #1D1D1F; }
+[data-theme="gallery"] .nav-back, [data-theme="gallery"] .nav-action { background: transparent; box-shadow: none; color: #0066CC; }
+[data-theme="gallery"] .nav-back:active, [data-theme="gallery"] .nav-action:active { transform: none; opacity: .6; box-shadow: none; }
+[data-theme="gallery"] .scrolled .navbar { box-shadow: 0 1px 0 #E6E6E8; }
+
+/* cards and rows: white on mist, hairline only; pressing dims instead of sinking */
+[data-theme="gallery"] button.row:active, [data-theme="gallery"] .row.pressable:active { transform: scale(.99); box-shadow: var(--lift-pressed); }
+[data-theme="gallery"] .icon-tile { box-shadow: none; }
+[data-theme="gallery"] .icon-tile svg { filter: none; }
+[data-theme="gallery"] .opt { box-shadow: none; }
+[data-theme="gallery"] .opt .opt-letter { background: #FFFFFF; color: #1D1D1F; box-shadow: 0 0 0 1px #D6D6D6; }
+[data-theme="gallery"] .tabbar { background: rgba(250, 250, 252, .86); box-shadow: 0 -1px 0 #E6E6E8; }
+[data-theme="gallery"] .banner { box-shadow: 0 0 0 1px #E6E6E8; }
+[data-theme="gallery"] .qcard { border-radius: 28px; box-shadow: 0 0 0 1px #E6E6E8; }
+/* the game's floating controls: frosted glass with a hairline, no lip */
+[data-theme="gallery"] .round-btn, [data-theme="gallery"] .ring-wrap, [data-theme="gallery"] .scene .caption-step { box-shadow: 0 0 0 1px #E6E6E8; }
+[data-theme="gallery"] .round-btn:active { transform: scale(.96); box-shadow: 0 0 0 1px #D6D6D6; }
+/* selection: a flat blue tick, no coloured edge */
+[data-theme="gallery"] .topic-row.selected, [dir="ltr"] [data-theme="gallery"] .topic-row.selected { box-shadow: var(--lift); }
+[data-theme="gallery"] .topic-row.selected .check { background: #0071E3; transform: none; box-shadow: none; }
+[data-theme="gallery"] .switch.on { background: #34C759; }
+[data-theme="gallery"] .switch { box-shadow: none; }
+[data-theme="gallery"] .switch::after { box-shadow: 0 2px 6px rgba(0, 0, 0, .15), 0 0 0 .5px rgba(0, 0, 0, .04); }
